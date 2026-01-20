@@ -1,0 +1,93 @@
+import { useEffect, useRef, useState } from "react";
+import getVibrantColor from "../utils/color";
+
+type Identity = {
+  id: string;
+  name: string;
+  uniqueString?: string;
+};
+
+type Props = {
+  identities: Identity[];
+  onSelect: (id: string) => void;
+  className?: string;
+};
+
+export default function IdentityDropdown({
+  identities,
+  onSelect,
+  className = "",
+}: Props) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (!ref.current) return;
+      if (!ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, []);
+
+  return (
+    <div ref={ref} className={`relative inline-block text-left ${className}`}>
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center px-16.75 border border-gray-700 justify-center  gap-2 bg-transparent text-gray-700  dark:text-gray-200 backdrop-blur-3xl  dark:border-gray-200"
+      >
+        <i className="nf nf-fa-angle_down text-sm" />
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className="absolute z-20 mt-2 w-38  dark:border-gray-300/60 bg-gray-700 text-gray-100 dark:bg-white/90 dark:text-gray-800 backdrop-blur-3xl shadow-lg"
+        >
+          <ul className="max-h-64 overflow-auto">
+            {identities.map((i) => {
+              const color = getVibrantColor(i.uniqueString ?? i.id);
+              return (
+                <li key={i.id}>
+                  <button
+                    role="menuitem"
+                    className="flex w-full items-center justify-between text-left hover:bg-gray-500/60 dark:hover:bg-gray-400/50"
+                    onClick={() => {
+                      onSelect(i.id);
+                      setOpen(false);
+                    }}
+                  >
+                    <div className="flex items-center gap-3 border border-t-0 w-full">
+                      <span
+                        className="w-5 h-6"
+                        style={{ backgroundColor: color }}
+                      />
+                      <div className="flex flex-col items-start">
+                        {i.uniqueString && (
+                          <span className="text-[11px]">{i.uniqueString}</span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
+            {identities.length === 0 && (
+              <li className="px-3 py-2 text-sm">No identities</li>
+            )}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
