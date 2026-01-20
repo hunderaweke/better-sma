@@ -39,40 +39,56 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${toHex(R)}${toHex(G)}${toHex(B)}`;
 }
 
-function fnv1a32(str: string): number {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
+function murmur3_32(str: string, seed = 0): number {
+  let h = seed >>> 0;
+  const c1 = 0xcc9e2d51;
+  const c2 = 0x1b873593;
+  let i = 0;
+  const len = str.length;
+  while (i + 4 <= len) {
+    let k =
+      (str.charCodeAt(i) & 0xff) |
+      ((str.charCodeAt(i + 1) & 0xff) << 8) |
+      ((str.charCodeAt(i + 2) & 0xff) << 16) |
+      ((str.charCodeAt(i + 3) & 0xff) << 24);
+    i += 4;
+    k = Math.imul(k, c1);
+    k = (k << 15) | (k >>> 17);
+    k = Math.imul(k, c2);
+    h ^= k;
+    h = (h << 13) | (h >>> 19);
+    h = (Math.imul(h, 5) + 0xe6546b64) >>> 0;
   }
+  let k1 = 0;
+  const rem = len & 3;
+  if (rem === 3) k1 ^= (str.charCodeAt(i + 2) & 0xff) << 16;
+  if (rem >= 2) k1 ^= (str.charCodeAt(i + 1) & 0xff) << 8;
+  if (rem >= 1) k1 ^= str.charCodeAt(i) & 0xff;
+  if (rem) {
+    k1 = Math.imul(k1, c1);
+    k1 = (k1 << 15) | (k1 >>> 17);
+    k1 = Math.imul(k1, c2);
+    h ^= k1;
+  }
+  h ^= len;
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x85ebca6b);
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2ae35);
+  h ^= h >>> 16;
   return h >>> 0;
 }
 
-function rotl32(v: number, n: number): number {
-  return ((v << n) | (v >>> (32 - n))) >>> 0;
-}
-
-export function getVibrantColorHex(str: string): string {
-  const base = fnv1a32(str);
-  const tail = fnv1a32(str.slice(-5));
-  const mix = Math.imul(rotl32(base ^ tail, 5), 0x9e3779b9) >>> 0;
+function getVibrantColor(str: string): string {
+  const a = murmur3_32(str, 0x1234abcd);
+  const b = murmur3_32([...str].reverse().join(""), 0xdeadbeef);
+  const mix = (a ^ b) >>> 0;
 
   const hue = (mix / 0xffffffff) * 360;
   const s = 55 + (((mix >>> 16) & 0xff) / 255) * 35;
   const l = 40 + (((mix >>> 24) & 0xff) / 255) * 20;
 
   return hslToHex(hue, s, l);
-}
-
-function getVibrantColor(str: string): string {
-  const base = fnv1a32(str);
-  const tail = fnv1a32(str.slice(-5));
-  const mix = Math.imul(rotl32(base ^ tail, 11), 0x9e3779b9) >>> 0;
-
-  const h = (mix / 0xffffffff) * 360;
-  const s = 55 + (((mix >>> 0) & 0xff) / 255) * 35;
-  const l = 40 + (((mix >>> 8) & 0xff) / 255) * 20;
-  return hslToHex(h, s, l);
 }
 
 export default getVibrantColor;
