@@ -1,4 +1,3 @@
-import React from "react";
 import getVibrantColor from "../utils/color";
 
 interface IdentityProps {
