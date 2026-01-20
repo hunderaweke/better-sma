@@ -5,6 +5,20 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>better-sma</title>
+    <script>
+      (() => {
+        const saved = localStorage.getItem("theme");
+        const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)");
+        const useDark = saved ? saved === "dark" : prefersDark?.matches;
+        document.documentElement.classList.toggle("dark", !!useDark);
+        if (prefersDark) {
+          prefersDark.addEventListener("change", (e) => {
+            if (localStorage.getItem("theme")) return;
+            document.documentElement.classList.toggle("dark", e.matches);
+          });
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

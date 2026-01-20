@@ -3,6 +3,8 @@
 @import "https://www.nerdfonts.com/assets/css/webfont.css";
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --default-font-family: "DM Sans", sans-serif;
   --font-garamond: "EB Garamond", sans-serif;
