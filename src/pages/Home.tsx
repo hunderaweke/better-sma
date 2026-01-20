@@ -3,6 +3,9 @@ import ToggleTheme from "../components/ToggleTheme";
 function Home() {
   return (
     <section className="bg-gray-200 dark:bg-gray-700 dark:text-gray-200 text-center text-gray-700 flex flex-col w-full justify-center items-center h-screen">
+      <div className="absolute top-0 right-2">
+        <ToggleTheme />
+      </div>
       <svg
         className="absolute inset-0 w-full h-full pointer-events-none opacity-20"
         aria-hidden="true"
@@ -23,11 +26,11 @@ function Home() {
         ></rect>
       </svg>
       <div className="relative z-10 p-8">
-        <h1 className="text-3xl md:text-6xl font-light">
+        <h1 className="text-4xl md:text-6xl font-light">
           Welcome to
           <span className="italic font-bold font-garamond"> better</span> S.M.A
         </h1>
-        <h3 className="text-sm md:text-xl mt-3 font-extralight">
+        <h3 className="text-xs md:text-xl mt-3 font-extralight">
           Manage Anonymous messages in the best way{" "}
         </h3>
         <p className="text-xs mt-3">
@@ -35,7 +38,7 @@ function Home() {
           <span className="font-bold">100</span> Identities,{" "}
           <span className="font-bold">100</span> Msg and Counting...
         </p>
-        <div className="mt-6 flex gap-4 justify-center">
+        <div className="mt-6 flex gap-4 text-[11px] sm:text-sm justify-center">
           <a
             className="inline-flex items-center justify-center py-4 px-6 dark:bg-gray-200 dark:text-gray-700 text-gray-200 bg-gray-700 backdrop-blur-3xl font-bold hover:bg-gray-500"
             href=""
@@ -48,12 +51,11 @@ function Home() {
             href=""
           >
             <i className="nf nf-oct-inbox mx-2 text-xl"></i>Your Inbox
+            <div className="absolute dark:text-gray-200 font-light text-gray-700 -right-3 -bottom-2">
+              <LoadedIdentity uniqueString="5GaMdgTyOYe" />
+            </div>
           </a>
         </div>
-        <div className="absolute  right-30 bottom-5">
-          <LoadedIdentity uniqueString="5GaMdgTyOYe" />
-        </div>
-        <ToggleTheme />
       </div>
     </section>
   );

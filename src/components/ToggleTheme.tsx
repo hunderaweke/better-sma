@@ -15,10 +15,18 @@ function ToggleTheme() {
 
   return (
     <button
-      className="mt-6 px-3 py-2 rounded bg-gray-200 dark:bg-gray-800 dark:text-gray-200"
+      className="mt-6 px-3 rounded bg-transparent border text-sm dark:text-gray-200"
       onClick={() => setIsDark((v) => !v)}
     >
-      {isDark ? "Light mode" : "Dark mode"}
+      {isDark ? (
+        <div>
+          <i className="nf nf-oct-sun mr-3"></i>Lights On
+        </div>
+      ) : (
+        <div>
+          <i className="nf nf-fa-moon mr-3"></i>Lights Off
+        </div>
+      )}
     </button>
   );
 }
