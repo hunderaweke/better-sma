@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-
+import { Sun, MoonStar } from "lucide-react";
 function ToggleTheme() {
   const [isDark, setIsDark] = useState<boolean>(() => {
     const saved = localStorage.getItem("theme");
@@ -20,11 +20,13 @@ function ToggleTheme() {
     >
       {isDark ? (
         <div>
-          <i className="nf nf-oct-sun mr-3"></i>Lights On
+          <Sun className="inline h-4 mx-2" />
+          Lights On
         </div>
       ) : (
         <div>
-          <i className="nf nf-fa-moon mr-3"></i>Lights Off
+          <MoonStar className="inline h-4 mx-2" />
+          Lights Off
         </div>
       )}
     </button>
