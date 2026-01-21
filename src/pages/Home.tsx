@@ -15,7 +15,7 @@ function Home() {
   const selected = identities.find((i) => i.id === selectedId);
 
   return (
-    <section className="bg-gray-200 dark:bg-gray-700 dark:text-gray-200 text-center text-gray-700 flex flex-col w-full justify-center items-center h-screen">
+    <section className="bg-gray-300 dark:bg-gray-800 dark:text-gray-300 text-center text-gray-800 flex flex-col w-full justify-center items-center h-screen">
       <div className="absolute top-0 right-2">
         <ToggleTheme />
       </div>
@@ -53,19 +53,19 @@ function Home() {
         </p>
         <div className="mt-6 flex gap-4 text-[11px] sm:text-sm justify-center">
           <a
-            className="items-center justify-center py-4 px-6 dark:bg-gray-200 dark:text-gray-700 text-gray-200 bg-gray-700 backdrop-blur-3xl font-bold hover:bg-gray-500"
+            className="items-center justify-center py-4 px-6 dark:bg-gray-300 dark:text-gray-800 text-gray-300 bg-gray-800 backdrop-blur-3xl font-bold hover:bg-gray-500"
             href=""
           >
             <i className="mx-2 text-xl nf-md-drama_masks nf"></i>
             Identities
           </a>
           <a
-            className="dark:bg-gray-200 dark:text-gray-700 text-gray-200 bg-gray-700  items-center justify-center py-4 px-6 backdrop-blur-3xl font-bold hover:bg-gray-500"
+            className="dark:bg-gray-300 dark:text-gray-800 text-gray-300 bg-gray-800  items-center justify-center py-4 px-6 backdrop-blur-3xl font-bold hover:bg-gray-500"
             href=""
           >
             <i className="nf nf-oct-inbox mx-2 text-xl"></i>Your Inbox
             {selected && (
-              <div className="absolute dark:text-gray-200 font-light text-gray-700 -right-10 -bottom-4">
+              <div className="absolute dark:text-gray-300 font-light text-gray-800 -right-10 -bottom-4">
                 <LoadedIdentity uniqueString={selected.uniqueString} />
               </div>
             )}
