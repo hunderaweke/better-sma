@@ -1,4 +1,4 @@
-import LoadedIdentity from "../components/LoadedIdentity";
+import IdentityTag from "../components/LoadedIdentity";
 import ToggleTheme from "../components/ToggleTheme";
 import IdentityDropdown from "../components/IdentityDropdown";
 import { useState } from "react";
@@ -63,13 +63,13 @@ function Home() {
           </Link>
           <Link
             className="dark:bg-gray-300 dark:text-gray-800 text-gray-300 bg-gray-800  items-center justify-center py-4 px-6 backdrop-blur-3xl font-bold hover:bg-gray-500"
-            to="/in"
+            to={selected ? `/in?identity=${selected.uniqueString}` : "/in"}
           >
             <Inbox className="inline mx-2" />
             Your Inbox
             {selected && (
               <div className="absolute dark:text-gray-300 font-light text-gray-800 -right-10 -bottom-4">
-                <LoadedIdentity uniqueString={selected.uniqueString} />
+                <IdentityTag uniqueString={selected.uniqueString} />
               </div>
             )}
           </Link>

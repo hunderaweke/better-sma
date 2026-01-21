@@ -6,7 +6,7 @@ interface IdentityProps {
   className?: string;
 }
 
-function LoadedIdentity(props: IdentityProps) {
+function IdentityTag(props: IdentityProps) {
   const color = useMemo(
     () => getVibrantColor(props.uniqueString),
     [props.uniqueString],
@@ -19,4 +19,4 @@ function LoadedIdentity(props: IdentityProps) {
   );
 }
 
-export default LoadedIdentity;
+export default IdentityTag;
