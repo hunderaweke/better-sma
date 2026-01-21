@@ -40,6 +40,13 @@ const messages: InboxMessage[] = [
     identity: "x1Ysdz9Kpq",
     time: "2d",
   },
+  {
+    identity: "x1Ysdz9Kpq",
+    body: "A string indicating the image format. The default type is image/png; that type is also used if the given type isn't supported. When supplied, the toCanvas function will return a blob matching the given image type and quality.",
+    time: "2d",
+    id: "m-3",
+    from: "Anon B",
+  },
 ];
 
 const identities: Identity[] = [
