@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import getVibrantColor from "../utils/color";
+import { ChevronDown } from "lucide-react";
 
 type Identity = {
   id: string;
@@ -44,15 +45,15 @@ export default function IdentityDropdown({
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center px-16.75 border border-gray-700 justify-center  gap-2 bg-transparent text-gray-700  dark:text-gray-200 backdrop-blur-3xl  dark:border-gray-200"
+        className="inline-flex items-center px-16.25 justify-center bg-transparent text-gray-700  dark:text-gray-200 backdrop-blur-xl  dark:border-gray-200"
       >
-        <i className="nf nf-fa-angle_down text-sm" />
+        <ChevronDown className="text-white dark:text-gray-800" />
       </button>
 
       {open && (
         <div
           role="menu"
-          className="absolute z-20 mt-2 w-38  dark:border-gray-300/60 bg-gray-700 text-gray-100 dark:bg-white/90 dark:text-gray-800 backdrop-blur-3xl shadow-lg"
+          className="absolute z-20 w-39 dark:border-gray-300/60 bg-gray-700/50 text-gray-100 dark:bg-white/90 dark:text-gray-800 backdrop-blur-3xl shadow-lg"
         >
           <ul className="max-h-64 overflow-auto">
             {identities.map((i) => {
@@ -67,7 +68,7 @@ export default function IdentityDropdown({
                       setOpen(false);
                     }}
                   >
-                    <div className="flex items-center gap-3 border border-t-0 w-full">
+                    <div className="flex items-center gap-3 border border-gray-800 border-t-0 w-full">
                       <span
                         className="w-5 h-6"
                         style={{ backgroundColor: color }}

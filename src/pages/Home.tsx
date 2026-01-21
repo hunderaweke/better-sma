@@ -2,6 +2,7 @@ import LoadedIdentity from "../components/LoadedIdentity";
 import ToggleTheme from "../components/ToggleTheme";
 import IdentityDropdown from "../components/IdentityDropdown";
 import { useState } from "react";
+import { Inbox, HatGlasses } from "lucide-react";
 
 function Home() {
   const identities = [
@@ -56,14 +57,15 @@ function Home() {
             className="items-center justify-center py-4 px-6 dark:bg-gray-300 dark:text-gray-800 text-gray-300 bg-gray-800 backdrop-blur-3xl font-bold hover:bg-gray-500"
             href=""
           >
-            <i className="mx-2 text-xl nf-md-drama_masks nf"></i>
+            <HatGlasses className="inline mx-2" />
             Identities
           </a>
           <a
             className="dark:bg-gray-300 dark:text-gray-800 text-gray-300 bg-gray-800  items-center justify-center py-4 px-6 backdrop-blur-3xl font-bold hover:bg-gray-500"
             href=""
           >
-            <i className="nf nf-oct-inbox mx-2 text-xl"></i>Your Inbox
+            <Inbox className="inline mx-2" />
+            Your Inbox
             {selected && (
               <div className="absolute dark:text-gray-300 font-light text-gray-800 -right-10 -bottom-4">
                 <LoadedIdentity uniqueString={selected.uniqueString} />
@@ -71,7 +73,7 @@ function Home() {
             )}
           </a>
         </div>
-        <div className="block absolute left-43.75 bottom-4 w-36 h-fit">
+        <div className="block absolute left-42.75 bottom-2 w-38">
           <IdentityDropdown identities={identities} onSelect={setSelectedId} />
         </div>
       </div>
