@@ -3,6 +3,7 @@ import ToggleTheme from "../components/ToggleTheme";
 import IdentityDropdown from "../components/IdentityDropdown";
 import { useState } from "react";
 import { Inbox, HatGlasses } from "lucide-react";
+import { Link } from "react-router-dom";
 
 function Home() {
   const identities = [
@@ -53,16 +54,16 @@ function Home() {
           <span className="font-bold">100</span> Msg and Counting...
         </p>
         <div className="mt-6 flex gap-4 text-[11px] sm:text-sm justify-center">
-          <a
+          <Link
             className="items-center justify-center py-4 px-6 dark:bg-gray-300 dark:text-gray-800 text-gray-300 bg-gray-800 backdrop-blur-3xl font-bold hover:bg-gray-500"
-            href=""
+            to="/id"
           >
             <HatGlasses className="inline mx-2" />
             Identities
-          </a>
-          <a
+          </Link>
+          <Link
             className="dark:bg-gray-300 dark:text-gray-800 text-gray-300 bg-gray-800  items-center justify-center py-4 px-6 backdrop-blur-3xl font-bold hover:bg-gray-500"
-            href=""
+            to="/in"
           >
             <Inbox className="inline mx-2" />
             Your Inbox
@@ -71,7 +72,7 @@ function Home() {
                 <LoadedIdentity uniqueString={selected.uniqueString} />
               </div>
             )}
-          </a>
+          </Link>
         </div>
         <div className="block absolute left-42.75 bottom-2 w-38">
           <IdentityDropdown identities={identities} onSelect={setSelectedId} />
