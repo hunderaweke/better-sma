@@ -1,6 +1,5 @@
 import IdentityTag from "../components/LoadedIdentity";
 import ToggleTheme from "../components/ToggleTheme";
-import IdentityDropdown from "../components/IdentityDropdown";
 import { useState } from "react";
 import { Inbox, HatGlasses } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -11,9 +10,7 @@ function Home() {
     { id: "id-2", name: "Work", uniqueString: "tGasMSTyOYU" },
     { id: "id-3", name: "Anon", uniqueString: "x1Ysdz9Kpq" },
   ];
-  const [selectedId, setSelectedId] = useState<string | undefined>(
-    identities[0]?.id,
-  );
+  const [selectedId] = useState<string | undefined>(identities[0]?.id);
   const selected = identities.find((i) => i.id === selectedId);
 
   return (
@@ -53,7 +50,7 @@ function Home() {
           <span className="font-bold">100</span> Identities,{" "}
           <span className="font-bold">100</span> Msg and Counting...
         </p>
-        <div className="mt-6 flex gap-4 text-[11px] sm:text-sm justify-center">
+        <div className="mt-6 flex gap-4 text-[11px] sm:text-sm justify-center items-center">
           <Link
             className="items-center justify-center py-4 px-6 dark:bg-gray-300 dark:text-gray-800 text-gray-300 bg-gray-800 backdrop-blur-3xl font-bold hover:bg-gray-500"
             to="/id"
@@ -73,9 +70,6 @@ function Home() {
               </div>
             )}
           </Link>
-        </div>
-        <div className="block absolute left-42.75 bottom-2 w-38">
-          <IdentityDropdown identities={identities} onSelect={setSelectedId} />
         </div>
       </div>
     </section>

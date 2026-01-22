@@ -39,21 +39,21 @@ export default function IdentityDropdown({
   }, []);
 
   return (
-    <div ref={ref} className={`relative inline-block text-left ${className}`}>
+    <div ref={ref} className={`text-left ${className}`}>
       <button
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center px-16.25 justify-center bg-transparent text-gray-700  dark:text-gray-200 backdrop-blur-xl  dark:border-gray-200"
+        className="inline-flex w-full items-center justify-center bg-transparent text-gray-700  dark:text-gray-300 backdrop-blur-xl  dark:border-gray-200"
       >
-        <ChevronDown className="text-white dark:text-gray-800" />
+        <ChevronDown className="dark:text-gray-300 text-gray-800" />
       </button>
 
       {open && (
         <div
           role="menu"
-          className="absolute z-20 w-39 dark:border-gray-300/60 bg-gray-700/50 text-gray-100 dark:bg-white/90 dark:text-gray-800 backdrop-blur-3xl shadow-lg"
+          className="absolute z-20 w-39 dark:border-gray-300/60 bg-gray-700/50 text-gray-300 dark:bg-white/90 dark:text-gray-800 backdrop-blur-3xl shadow-lg"
         >
           <ul className="max-h-64 overflow-auto">
             {identities.map((i) => {
