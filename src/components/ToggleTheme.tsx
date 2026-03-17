@@ -15,7 +15,7 @@ function ToggleTheme() {
 
   return (
     <button
-      className="mt-6 px-3 rounded bg-transparent border text-sm dark:text-gray-200"
+      className="mt-6 z-10 px-3 rounded bg-transparent border text-sm dark:text-gray-200"
       onClick={() => setIsDark((v) => !v)}
     >
       {isDark ? (
