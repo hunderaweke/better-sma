@@ -1,12 +1,8 @@
 import { useMemo } from "react";
 import getVibrantColor from "../utils/color";
+import type { IdentityTagProps } from "../types";
 
-interface IdentityProps {
-  uniqueString: string;
-  className?: string;
-}
-
-function IdentityTag(props: IdentityProps) {
+function IdentityTag(props: IdentityTagProps) {
   const color = useMemo(
     () => getVibrantColor(props.uniqueString),
     [props.uniqueString],

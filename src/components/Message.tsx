@@ -7,12 +7,7 @@ import {
   Loader2,
   AlertCircle,
 } from "lucide-react";
-
-interface MessageProps {
-  identity: string;
-  text: string;
-  time: string;
-}
+import type { MessageProps } from "../types";
 
 export default function Message(props: MessageProps) {
   const messageRef = useRef<HTMLDivElement>(null);

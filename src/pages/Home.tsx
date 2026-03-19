@@ -3,9 +3,10 @@ import ToggleTheme from "../components/ToggleTheme";
 import { useState } from "react";
 import { Inbox, HatGlasses } from "lucide-react";
 import { Link } from "react-router-dom";
+import type { Identity } from "../types";
 
 function Home() {
-  const identities = [
+  const identities: Identity[] = [
     { id: "id-1", name: "Primary", uniqueString: "5GaMdgTyOYe" },
     { id: "id-2", name: "Work", uniqueString: "tGasMSTyOYU" },
     { id: "id-3", name: "Anon", uniqueString: "x1Ysdz9Kpq" },

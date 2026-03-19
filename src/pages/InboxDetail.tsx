@@ -3,20 +3,7 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import { Edit3, Home, Save, Settings, Share2, VolumeX,Plus } from "lucide-react";
 import ToggleTheme from "../components/ToggleTheme";
 import Message from "../components/Message";
-
-type InboxMessage = {
-  id: string;
-  from: string;
-  body: string;
-  identity: string;
-  time: string;
-};
-
-type Identity = {
-  id: string;
-  name: string;
-  uniqueString: string;
-};
+import type { Identity, InboxMessage } from "../types";
 
 const messages: InboxMessage[] = [
   {

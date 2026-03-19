@@ -2,14 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import getVibrantColor from "../utils/color";
 import { ChevronDown } from "lucide-react";
 
-type Identity = {
-  id: string;
-  name: string;
-  uniqueString?: string;
-};
+import type { IdentityDropdownItem } from "../types";
 
 type Props = {
-  identities: Identity[];
+  identities: IdentityDropdownItem[];
   onSelect: (id: string) => void;
   className?: string;
 };

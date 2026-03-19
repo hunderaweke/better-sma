@@ -2,12 +2,7 @@ import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { Home, User2 } from "lucide-react";
 import ToggleTheme from "../components/ToggleTheme";
 import getVibrantColor from "../utils/color";
-
-type Identity = {
-  id: string;
-  name: string;
-  uniqueString: string;
-};
+import type { Identity } from "../types";
 
 function Inbox() {
   const identities: Identity[] = [

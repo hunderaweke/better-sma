@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { Sun, MoonStar } from "lucide-react";
-interface ToggleThemeProps {
-  className?: string;
-}
+import type { ToggleThemeProps } from "../types";
+
 function ToggleTheme({ className }: ToggleThemeProps) {
   const [isDark, setIsDark] = useState<boolean>(() => {
     const saved = localStorage.getItem("theme");
