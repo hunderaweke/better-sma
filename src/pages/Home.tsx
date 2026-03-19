@@ -2,6 +2,7 @@ import IdentityTag from "../components/LoadedIdentity";
 import ToggleTheme from "../components/ToggleTheme";
 import { useState } from "react";
 import { Inbox, HatGlasses } from "lucide-react";
+import { SiGithub, SiGoogle } from "@icons-pack/react-simple-icons";
 import { Link } from "react-router-dom";
 import type { Identity } from "../types";
 
@@ -13,6 +14,11 @@ function Home() {
   ];
   const [selectedId] = useState<string | undefined>(identities[0]?.id);
   const selected = identities.find((i) => i.id === selectedId);
+  const isLoggedIn = Boolean(
+    localStorage.getItem("accessToken") ||
+    localStorage.getItem("token") ||
+    localStorage.getItem("isLoggedIn") === "true",
+  );
 
   return (
     <section className="bg-gray-300 dark:bg-gray-800 dark:text-gray-300 text-center text-gray-800 flex flex-col w-full justify-center items-center h-screen">
@@ -51,26 +57,47 @@ function Home() {
           <span className="font-bold">100</span> Identities,{" "}
           <span className="font-bold">100</span> Msg and Counting...
         </p>
-        <div className="mt-6 flex gap-4 text-[11px] sm:text-sm justify-center items-center">
-          <Link
-            className="items-center justify-center py-4 px-6 dark:bg-gray-300 dark:text-gray-800 text-gray-300 bg-gray-800 backdrop-blur-3xl font-bold hover:bg-gray-500"
-            to="/id"
-          >
-            <HatGlasses className="inline mx-2" />
-            Identities
-          </Link>
-          <Link
-            className="dark:bg-gray-300 dark:text-gray-800 text-gray-300 bg-gray-800  items-center justify-center py-4 px-6 backdrop-blur-3xl font-bold hover:bg-gray-500"
-            to={selected ? `/in?identity=${selected.uniqueString}` : "/in"}
-          >
-            <Inbox className="inline mx-2" />
-            Your Inbox
-            {selected && (
-              <div className="absolute dark:text-gray-300 font-light text-gray-800 -right-10 -bottom-4">
-                <IdentityTag uniqueString={selected.uniqueString} />
-              </div>
-            )}
-          </Link>
+        <div className="mt-6 flex flex-wrap gap-4 text-[11px] sm:text-sm justify-center items-center">
+          {isLoggedIn ? (
+            <>
+              <Link
+                className="items-center justify-center py-4 px-6 dark:bg-gray-300 dark:text-gray-800 text-gray-300 bg-gray-800 backdrop-blur-3xl font-bold hover:bg-gray-500"
+                to="/id"
+              >
+                <HatGlasses className="inline mx-2" />
+                Identities
+              </Link>
+              <Link
+                className="dark:bg-gray-300 dark:text-gray-800 text-gray-300 bg-gray-800  items-center justify-center py-4 px-6 backdrop-blur-3xl font-bold hover:bg-gray-500"
+                to={selected ? `/in?identity=${selected.uniqueString}` : "/in"}
+              >
+                <Inbox className="inline mx-2" />
+                Your Inbox
+                {selected && (
+                  <div className="absolute dark:text-gray-300 font-light text-gray-800 -right-10 -bottom-4">
+                    <IdentityTag uniqueString={selected.uniqueString} />
+                  </div>
+                )}
+              </Link>
+            </>
+          ) : (
+            <>
+              <a
+                className="inline-flex items-center justify-center gap-2 py-4 px-6 dark:bg-gray-300 dark:text-gray-800 text-gray-300 bg-gray-800 backdrop-blur-3xl font-bold hover:bg-gray-500"
+                href="/auth/google"
+              >
+                <SiGoogle className="h-4 w-4" />
+                Continue with Google
+              </a>
+              <a
+                className="inline-flex items-center justify-center gap-2 py-4 px-6 dark:bg-gray-300 dark:text-gray-800 text-gray-300 bg-gray-800 backdrop-blur-3xl font-bold hover:bg-gray-500"
+                href="/auth/github"
+              >
+                <SiGithub className="h-4 w-4" />
+                Continue with GitHub
+              </a>
+            </>
+          )}
         </div>
       </div>
     </section>
