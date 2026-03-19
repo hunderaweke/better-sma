@@ -15,7 +15,7 @@ function Home() {
 
   return (
     <section className="bg-gray-300 dark:bg-gray-800 dark:text-gray-300 text-center text-gray-800 flex flex-col w-full justify-center items-center h-screen">
-      <div className="absolute top-0 right-2">
+      <div className="absolute top-4 right-10">
         <ToggleTheme />
       </div>
       <svg

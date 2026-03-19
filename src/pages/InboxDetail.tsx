@@ -160,29 +160,28 @@ function InboxDetail() {
           fill="white"
         />
       </svg>
-
-      <div className="absolute z-20 -top-4 md:top-0 right-2">
-        <ToggleTheme />
-      </div>
-      <div className="relative z-3 mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-        <div className="grid relative w-full gap-4 lg:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
-          <div className="sticky top-10 z-20 self-start flex justify-center md:relative">
-            <div className="w-full border border-gray-500/40 bg-gray-200 p-4 shadow-sm dark:bg-gray-700/70 sm:p-5">
-              <div className="flex flex-wrap items-center gap-2">
-                <Link
-                  to="/"
-                  className="inline-flex gap-2 items-center bg-gray-800 text-gray-200 dark:bg-gray-300 dark:text-gray-800 px-3 py-2 text-xs font-semibold tracking-wide shadow-sm"
-                >
-                  <Home size={16} />
-                  Home
-                </Link>
-                <button className="inline-flex gap-2 items-center bg-gray-800 text-gray-200 dark:bg-gray-300 dark:text-gray-800 px-4 py-2 text-xs font-semibold tracking-wide shadow-sm">
-                  New Room
-                </button>
+      <div className="relative z-3 mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 sm:px-6 lg:p-4 lg:px-8">
+        <div className="flex flex-col md:grid relative w-full lg:gap-4 lg:grid-rows-1 max-h-screen lg:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
+          <div className="p w-full lg:max-h-72 flex justify-center md:relative">
+            <div className="w-full border border-gray-500/40 bg-gray-200 p-4 shadow-sm dark:bg-gray-700">
+              <div className="flex flex-wrap justify-between items-start gap-2">
+                <div className="flex items-center gap-2">
+                  <Link
+                    to="/"
+                    className="inline-flex gap-2 items-center bg-gray-800 text-gray-200 dark:bg-gray-300 dark:text-gray-800 px-3 py-2 text-xs font-semibold tracking-wide shadow-sm"
+                  >
+                    <Home size={16} />
+                    Home
+                  </Link>
+                  <button className="inline-flex gap-2 items-center bg-gray-800 text-gray-200 dark:bg-gray-300 dark:text-gray-800 px-4 py-2 text-xs font-semibold tracking-wide shadow-sm">
+                    New Room
+                  </button>
+                </div>
+                <ToggleTheme />
               </div>
               <div className="border flex flex-col border-gray-500/50 bg-gray-100/70 p-2 text-left gap-3 dark:bg-gray-800/70">
-                <div className="flex flex-col gap-4 sm:flex-row md:items-center md:gap-5 md:text-left">
-                  <div className="font-bold text-2xl sm:shrink-0">
+                <div className="flex gap-4 flex-row md:items-center md:gap-5 md:text-left">
+                  <div className="font-bold md:text-2xl sm:shrink-0">
                     <span>Room</span>
                   </div>
 
@@ -236,14 +235,14 @@ function InboxDetail() {
                     </button>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-2 min-h-[60px] md:min-h-[140px] sm:grid-cols-2">
+                <div className="grid grid-cols-3 gap-2 min-h-[60px] lg:min-h-[140px] lg:grid-cols-2">
                   <button
-                    className="border border-gray-600/60 bg-gray-800 text-gray-200 dark:bg-gray-300 dark:text-gray-800 flex items-center justify-center gap-3 md:p-4 col-span-1 md:col-span-2"
+                    className="border border-gray-600/60 bg-gray-800 text-gray-200 dark:bg-gray-300 dark:text-gray-800 flex items-center justify-center gap-3 md:p-4 col-span-1 lg:col-span-2"
                     type="button"
                     aria-label="Share"
                   >
                     <Share2 size={22} />
-                    <span className="hidden md:block">Copy link</span>
+                    <span className="hidden lg:block">Copy link</span>
                   </button>
                   <button
                     className="border border-gray-600/60 bg-gray-800 text-gray-200 dark:bg-gray-300 dark:text-gray-800 flex items-center justify-center gap-3 p-2 md:p-4"
@@ -251,7 +250,7 @@ function InboxDetail() {
                     aria-label="Cog"
                   >
                     <Settings size={22} />
-                    <span className="hidden md:block">Settings</span>
+                    <span className="hidden lg:block">Settings</span>
                   </button>
                   <button
                     className="border border-gray-600/60 bg-gray-800 text-gray-200 dark:bg-gray-300 dark:text-gray-800 flex items-center justify-center gap-3 p-2 md:p-4"
@@ -259,33 +258,31 @@ function InboxDetail() {
                     aria-label="Mute"
                   >
                     <VolumeX size={22} />
-                    <span className="hidden md:block">Mute</span>
+                    <span className="hidden lg:block">Mute</span>
                   </button>
                 </div>
               </div>
             </div>
           </div>
-          <div className="w-full min-w-0">
-            <div className="mt-0 max-h-screen overflow-y-auto no-scrollbar border border-gray-500/40 bg-gray-200/70 p-4 shadow-sm dark:bg-gray-700/70 sm:p-6 lg:max-h-[calc(100vh-4rem)]">
-              {filtered.length > 0 ? (
-                filtered.map((m) => {
-                  return (
-                    <Message
-                      key={m.id}
-                      identity={m.identity}
-                      text={m.body}
-                      time={m.time}
-                    />
-                  );
-                })
-              ) : (
-                <div className="flex items-center max-h-screen justify-center border border-gray-500/50 bg-gray-200/70 dark:bg-gray-700/70 px-3 py-3 text-left">
-                  <span className="text-sm opacity-80">
-                    No messages for this identity.
-                  </span>
-                </div>
-              )}
-            </div>
+          <div className="mt-0 overflow-auto no-scrollbar max-h-[calc(80vh)]   border border-gray-500/40 bg-gray-200/70 p-4 shadow-sm dark:bg-gray-700/70 sm:p-6 lg:max-h-[calc(100vh-4rem)]">
+            {filtered.length > 0 ? (
+              filtered.map((m) => {
+                return (
+                  <Message
+                    key={m.id}
+                    identity={m.identity}
+                    text={m.body}
+                    time={m.time}
+                  />
+                );
+              })
+            ) : (
+              <div className="flex items-center max-h-screen justify-center border border-gray-500/50 bg-gray-200/70 dark:bg-gray-700/70 px-3 py-3 text-left">
+                <span className="text-sm opacity-80">
+                  No messages for this identity.
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>
