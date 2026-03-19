@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
-import { Edit3, Home, Save, Settings, Share2, VolumeX } from "lucide-react";
+import { Edit3, Home, Save, Settings, Share2, VolumeX,Plus } from "lucide-react";
 import ToggleTheme from "../components/ToggleTheme";
 import Message from "../components/Message";
 
@@ -173,9 +173,14 @@ function InboxDetail() {
                     <Home size={16} />
                     Home
                   </Link>
-                  <button className="inline-flex gap-2 items-center bg-gray-800 text-gray-200 dark:bg-gray-300 dark:text-gray-800 px-4 py-2 text-xs font-semibold tracking-wide shadow-sm">
+                  <Link
+                    to="/rooms"
+                    className="inline-flex gap-2 items-center bg-gray-800 text-gray-200 dark:bg-gray-300 dark:text-gray-800 px-4 py-2 text-xs font-semibold tracking-wide shadow-sm"
+                  >
+                    <Plus size={16} />
+
                     New Room
-                  </button>
+                  </Link>
                 </div>
                 <ToggleTheme />
               </div>
