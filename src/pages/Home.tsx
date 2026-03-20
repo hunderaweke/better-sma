@@ -1,10 +1,62 @@
 import IdentityTag from "../components/LoadedIdentity";
 import ToggleTheme from "../components/ToggleTheme";
-import { useState } from "react";
-import { Inbox, HatGlasses } from "lucide-react";
+import { useEffect, useState } from "react";
+import { CircleUserRound, Inbox, HatGlasses, LogOut } from "lucide-react";
 import { SiGithub, SiGoogle } from "@icons-pack/react-simple-icons";
 import { Link } from "react-router-dom";
 import type { Identity } from "../types";
+import axios from "axios";
+
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
+const authStatusUrl =
+  import.meta.env.VITE_AUTH_STATUS_URL ?? `${apiBaseUrl}/api/auth/me`;
+const googleAuthUrl =
+  import.meta.env.VITE_GOOGLE_AUTH_URL ?? `${apiBaseUrl}/api/auth/google`;
+const githubAuthUrl =
+  import.meta.env.VITE_GITHUB_AUTH_URL ?? `${apiBaseUrl}/api/auth/github`;
+const logoutUrl =
+  import.meta.env.VITE_LOGOUT_URL ?? `${apiBaseUrl}/api/auth/logout`;
+
+function getStoredAuthState() {
+  return Boolean(
+    localStorage.getItem("accessToken") ||
+    localStorage.getItem("token") ||
+    localStorage.getItem("isLoggedIn") === "true",
+  );
+}
+
+function getDisplayName(authData: unknown) {
+  if (!authData || typeof authData !== "object") {
+    return null;
+  }
+
+  const user = authData as {
+    name?: unknown;
+    displayName?: unknown;
+    fullName?: unknown;
+    email?: unknown;
+    user?: {
+      name?: unknown;
+      displayName?: unknown;
+      fullName?: unknown;
+      email?: unknown;
+    };
+  };
+
+  const candidate =
+    user.displayName ??
+    user.fullName ??
+    user.name ??
+    user.user?.displayName ??
+    user.user?.fullName ??
+    user.user?.name ??
+    user.email ??
+    user.user?.email;
+
+  return typeof candidate === "string" && candidate.trim().length > 0
+    ? candidate.trim()
+    : null;
+}
 
 function Home() {
   const identities: Identity[] = [
@@ -14,11 +66,65 @@ function Home() {
   ];
   const [selectedId] = useState<string | undefined>(identities[0]?.id);
   const selected = identities.find((i) => i.id === selectedId);
-  const isLoggedIn = Boolean(
-    localStorage.getItem("accessToken") ||
-    localStorage.getItem("token") ||
-    localStorage.getItem("isLoggedIn") === "true",
-  );
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(getStoredAuthState());
+  const [loggedInUserName, setLoggedInUserName] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function checkAuth() {
+      try {
+        const response = await fetch(authStatusUrl, {
+          credentials: "include",
+        });
+
+        if (!isActive) {
+          return;
+        }
+
+        if (response.ok) {
+          let nextUserName: string | null = null;
+
+          try {
+            const authData: unknown = await response.json();
+            nextUserName = getDisplayName(authData);
+          } catch {
+            nextUserName = null;
+          }
+
+          setIsLoggedIn(true);
+          setLoggedInUserName(nextUserName);
+          return;
+        }
+
+        if (response.status === 401 || response.status === 403) {
+          setIsLoggedIn(false);
+          setLoggedInUserName(null);
+          return;
+        }
+      } catch {
+        if (!isActive) {
+          return;
+        }
+      }
+
+      if (isActive) {
+        setIsLoggedIn(getStoredAuthState());
+      }
+    }
+
+    void checkAuth();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  function handleLogout() {
+    setIsLoggedIn(false);
+    setLoggedInUserName(null);
+    axios.post(logoutUrl, {}, { withCredentials: true }).catch(() => {});
+  }
 
   return (
     <section className="bg-gray-300 dark:bg-gray-800 dark:text-gray-300 text-center text-gray-800 flex flex-col w-full justify-center items-center h-screen">
@@ -45,6 +151,32 @@ function Home() {
         ></rect>
       </svg>
       <div className="relative z-10 p-8">
+        {isLoggedIn && (
+          <div className="mb-32 flex justify-center">
+            <div className="relative inline-flex flex-col items-center">
+              <div className="inline-flex items-center gap-3 border border-gray-500/40 bg-gray-200/80 px-4 py-2 shadow-lg backdrop-blur  dark:bg-gray-900/50">
+                <span className="relative flex h-10 w-10 items-center justify-center bg-gray-800 text-gray-100 dark:bg-gray-200 dark:text-gray-800">
+                  <CircleUserRound className="h-6 w-6" />
+                  <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 border-2 border-gray-200 bg-emerald-500 dark:border-gray-900" />
+                </span>
+                <div className="text-left leading-tight">
+                  <p className="text-[10px] uppercase tracking-[0.1em] text-gray-600 dark:text-gray-400">
+                    Logged in
+                  </p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                    {loggedInUserName ?? "Authenticated user"}
+                  </p>
+                </div>
+                <button
+                  className="h-8 w-8 border flex items-center justify-center border-gray-800 hover:border-gray-500 hover:bg-gray-800 hover:text-gray-200 transition"
+                  title="Logout"
+                >
+                  <LogOut className="h-4 w-4" onClick={handleLogout} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <h1 className="text-4xl md:text-6xl font-light">
           Welcome to
           <span className="italic font-bold font-garamond"> better</span> S.M.A
@@ -84,14 +216,14 @@ function Home() {
             <>
               <a
                 className="inline-flex items-center justify-center gap-2 py-4 px-6 dark:bg-gray-300 dark:text-gray-800 text-gray-300 bg-gray-800 backdrop-blur-3xl font-bold hover:bg-gray-500"
-                href="/auth/google"
+                href={googleAuthUrl}
               >
                 <SiGoogle className="h-4 w-4" />
                 Continue with Google
               </a>
               <a
                 className="inline-flex items-center justify-center gap-2 py-4 px-6 dark:bg-gray-300 dark:text-gray-800 text-gray-300 bg-gray-800 backdrop-blur-3xl font-bold hover:bg-gray-500"
-                href="/auth/github"
+                href={githubAuthUrl}
               >
                 <SiGithub className="h-4 w-4" />
                 Continue with GitHub
