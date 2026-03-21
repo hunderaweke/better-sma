@@ -3,7 +3,7 @@ import ToggleTheme from "../components/ToggleTheme";
 import { useEffect, useState } from "react";
 import { CircleUserRound, Inbox, HatGlasses, LogOut } from "lucide-react";
 import { SiGithub, SiGoogle } from "@icons-pack/react-simple-icons";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { Identity } from "../types";
 import axios from "axios";
 
@@ -23,6 +23,18 @@ function getStoredAuthState() {
     localStorage.getItem("token") ||
     localStorage.getItem("isLoggedIn") === "true",
   );
+}
+function parseAuthError(payload: unknown): string | null {
+  if (typeof payload !== "string") {
+    return null;
+  }
+  switch (payload) {
+    case "email_registered_with_different_provider":
+      return "This email is already registered with a different provider.";
+    case "authentication_failed":
+      return "Authentication failed. Please try again.";
+  }
+  return payload;
 }
 
 function getDisplayName(authData: unknown) {
@@ -68,7 +80,27 @@ function Home() {
   const selected = identities.find((i) => i.id === selectedId);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(getStoredAuthState());
   const [loggedInUserName, setLoggedInUserName] = useState<string | null>(null);
+  const location = useLocation();
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const errorCode = params.get("error");
+    const nextError = parseAuthError(errorCode);
 
+    setTimeout(() => setError(nextError), 0);
+
+    if (!nextError) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setError(null);
+    }, 3000);
+
+    navigate(location.pathname, { replace: true });
+    return () => window.clearTimeout(timeoutId);
+  }, [location.pathname]);
   useEffect(() => {
     let isActive = true;
 
@@ -152,9 +184,9 @@ function Home() {
       </svg>
       <div className="relative z-10 p-8">
         {isLoggedIn && (
-          <div className="mb-32 flex justify-center">
+          <div className="mb-10 flex justify-center">
             <div className="relative inline-flex flex-col items-center">
-              <div className="inline-flex items-center gap-3 border border-gray-500/40 bg-gray-200/80 px-4 py-2 shadow-lg backdrop-blur  dark:bg-gray-900/50">
+              <div className="inline-flex items-center gap-3 border border-gray-500/40 bg-gray-200/80 px-4 py-2 backdrop-blur  dark:bg-gray-900/50">
                 <span className="relative flex h-10 w-10 items-center justify-center bg-gray-800 text-gray-100 dark:bg-gray-200 dark:text-gray-800">
                   <CircleUserRound className="h-6 w-6" />
                   <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 border-2 border-gray-200 bg-emerald-500 dark:border-gray-900" />
@@ -168,7 +200,7 @@ function Home() {
                   </p>
                 </div>
                 <button
-                  className="h-8 w-8 border flex items-center justify-center border-gray-800 hover:border-gray-500 hover:bg-gray-800 hover:text-gray-200 transition"
+                  className="h-8 w-8 border flex items-center cursor-pointer justify-center border-gray-800 hover:border-gray-500 hover:bg-gray-800 hover:text-gray-200 transition"
                   title="Logout"
                 >
                   <LogOut className="h-4 w-4" onClick={handleLogout} />
@@ -231,6 +263,12 @@ function Home() {
             </>
           )}
         </div>
+        {error && (
+          <div className="mt-6 inline-flex max-w-80 items-start gap-3 border border-red-500/30 bg-red-100/80 px-4 py-3 text-left text-sm font-medium text-red-900 backdrop-blur dark:border-red-400 dark:bg-red-800 dark:text-red-100">
+            <span className="mt-0.5 h-2.5 w-2.5 shrink-0 bg-red-500 dark:bg-red-300" />
+            <p>{error}</p>
+          </div>
+        )}
       </div>
     </section>
   );
