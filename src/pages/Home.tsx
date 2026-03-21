@@ -5,7 +5,7 @@ import { CircleUserRound, Inbox, HatGlasses, LogOut } from "lucide-react";
 import { SiGithub, SiGoogle } from "@icons-pack/react-simple-icons";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { Identity } from "../types";
-import axios from "axios";
+import api from "../utils/api";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
 const authStatusUrl =
@@ -155,7 +155,7 @@ function Home() {
   function handleLogout() {
     setIsLoggedIn(false);
     setLoggedInUserName(null);
-    axios.post(logoutUrl, {}, { withCredentials: true }).catch(() => {});
+    api.post(logoutUrl, {}).catch(() => {});
   }
 
   return (
@@ -200,7 +200,7 @@ function Home() {
                   </p>
                 </div>
                 <button
-                  className="h-8 w-8 border flex items-center cursor-pointer justify-center border-gray-800 hover:border-gray-500 hover:bg-gray-800 hover:text-gray-200 transition"
+                  className="h-8 w-8 border flex items-center cursor-pointer justify-center border-gray-800 hover:border-gray-500 hover:bg-gray-800 dark:border-gray-300 hover:text-gray-200 transition"
                   title="Logout"
                 >
                   <LogOut className="h-4 w-4" onClick={handleLogout} />

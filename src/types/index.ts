@@ -6,3 +6,4 @@ export type {
 export type { MessageProps } from "./message";
 export type { InboxMessage } from "./inbox";
 export type { ToggleThemeProps } from "./theme";
+export type { Room } from "./room";
