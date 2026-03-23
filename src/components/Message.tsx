@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { domToPng } from "modern-screenshot";
-import IdentityTag from "./LoadedIdentity";
+import IdentityTag from "./IdentityTag";
 import {
   ClipboardCopyIcon,
   CheckIcon,

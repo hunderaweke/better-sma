@@ -286,14 +286,14 @@ function InboxDetailView({ roomId: uniqueString }: { roomId: string }) {
                     className="inline-flex gap-2 items-center bg-gray-800 text-gray-200 dark:bg-gray-300 dark:text-gray-800 px-3 py-2 text-xs font-semibold tracking-wide shadow-sm"
                   >
                     <Home size={16} />
-                    Home
+                    <span className="hidden sm:block">Home</span>
                   </Link>
                   <Link
                     to="/rooms"
                     className="inline-flex gap-2 items-center bg-gray-800 text-gray-200 dark:bg-gray-300 dark:text-gray-800 px-4 py-2 text-xs font-semibold tracking-wide shadow-sm"
                   >
                     <Plus size={16} />
-                    New Room
+                    <span className="hidden sm:block">New Room</span>
                   </Link>
                 </div>
                 <ToggleTheme />

@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Home, Inbox } from "lucide-react";
 import ToggleTheme from "../components/ToggleTheme";
 import IdentityDropdown from "../components/IdentityDropdown";
-import IdentityTag from "../components/LoadedIdentity";
+import IdentityTag from "../components/IdentityTag";
 import getVibrantColor from "../utils/color";
 import type { Identity } from "../types";
 

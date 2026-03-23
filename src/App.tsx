@@ -5,6 +5,7 @@ import Identities from "./pages/Identities";
 import Rooms from "./pages/Rooms";
 import InboxDetail from "./pages/InboxDetail";
 import NotFound from "./pages/NotFound";
+import Send from "./pages/Send";
 
 export const router = createBrowserRouter([
   { path: "/", element: <Home /> },
@@ -12,5 +13,6 @@ export const router = createBrowserRouter([
   { path: "/in/:identity", element: <InboxDetail /> },
   { path: "/id", element: <Identities /> },
   { path: "/rooms", element: <Rooms /> },
+  { path: "/send/:identity", element: <Send /> },
   { path: "*", element: <NotFound /> },
 ]);

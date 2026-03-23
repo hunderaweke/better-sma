@@ -1,4 +1,4 @@
-import IdentityTag from "../components/LoadedIdentity";
+import IdentityTag from "../components/IdentityTag";
 import ToggleTheme from "../components/ToggleTheme";
 import { useEffect, useState } from "react";
 import { CircleUserRound, Inbox, HatGlasses, LogOut } from "lucide-react";
