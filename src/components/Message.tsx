@@ -48,7 +48,7 @@ export default function Message(props: MessageProps) {
   };
 
   return (
-    <div className="p-3" ref={messageRef}>
+    <div className="p-0.5" ref={messageRef}>
       <div className="relative text-left pt-4">
         <div className="absolute top-0 left-0">
           <IdentityTag uniqueString={props.identity} />
