@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import {
   Edit3,
@@ -11,128 +11,248 @@ import {
 } from "lucide-react";
 import ToggleTheme from "../components/ToggleTheme";
 import Message from "../components/Message";
-import type { Identity, InboxMessage } from "../types";
+import api from "../utils/api";
 
-const messages: InboxMessage[] = [
-  {
-    id: "m-1",
-    from: "Anon A",
-    body: "Hey, just checking in to see how you are doing. Let me know if you have a minute to chat today.",
-    identity: "5GaMdgTyOYe",
-    time: "2d",
-  },
-  {
-    id: "m-1",
-    from: "Anon A",
-    body: "Hey, just checking in to see how you are doing. Let me know if you have a minute to chat today.",
-    identity: "5GaMdgTyOYe",
-    time: "2d",
-  },
-  {
-    id: "m-1",
-    from: "Anon A",
-    body: "Hey, just checking in to see how you are doing. Let me know if you have a minute to chat today.",
-    identity: "5GaMdgTyOYe",
-    time: "2d",
-  },
-  {
-    id: "m-1",
-    from: "Anon A",
-    body: "Hey, just checking in to see how you are doing. Let me know if you have a minute to chat today.",
-    identity: "5GaMdgTyOYe",
-    time: "2d",
-  },
-  {
-    id: "m-1",
-    from: "Anon A",
-    body: "Hey, just checking in to see how you are doing. Let me know if you have a minute to chat today.",
-    identity: "5GaMdgTyOYe",
-    time: "2d",
-  },
-  {
-    id: "m-1",
-    from: "Anon A",
-    body: "Hey, just checking in to see how you are doing. Let me know if you have a minute to chat today.",
-    identity: "5GaMdgTyOYe",
-    time: "2d",
-  },
-  {
-    id: "m-1",
-    from: "Anon A",
-    body: "Hey, just checking in to see how you are doing. Let me know if you have a minute to chat today.",
-    identity: "5GaMdgTyOYe",
-    time: "2d",
-  },
-  {
-    id: "m-1",
-    from: "Anon A",
-    body: "Hey, just checking in to see how you are doing. Let me know if you have a minute to chat today.",
-    identity: "5GaMdgTyOYe",
-    time: "2d",
-  },
-  {
-    id: "m-1",
-    from: "Anon A",
-    body: "Hey, just checking in to see how you are doing. Let me know if you have a minute to chat today.",
-    identity: "5GaMdgTyOYe",
-    time: "2d",
-  },
-  {
-    id: "m-1",
-    from: "Anon A",
-    body: "Hey, just checking in to see how you are doing. Let me know if you have a minute to chat today.",
-    identity: "5GaMdgTyOYe",
-    time: "2d",
-  },
-  {
-    id: "m-2",
-    from: "Work Contact",
-    body: "Project update attached. Please review the milestones and confirm the timelines. Happy to adjust if needed.",
-    time: "2d",
-    identity: "tGasMSTyOYU",
-  },
-  {
-    id: "m-3",
-    from: "Anon B",
-    body: "Can we talk later today? I have a quick question about the thing we discussed last week.",
-    identity: "x1Ysdz9Kpq",
-    time: "2d",
-  },
-  {
-    identity: "x1Ysdz9Kpq",
-    body: "A string indicating the image format. The default type is image/png; that type is also used if the given type isn't supported. When supplied, the toCanvas function will return a blob matching the given image type and quality.",
-    time: "2d",
-    id: "m-3",
-    from: "Anon B",
-  },
-];
+type RoomMessage = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  room_id: string;
+  from_unique: string;
+  text: string;
+};
 
-const identities: Identity[] = [
-  { id: "id-1", name: "Primary", uniqueString: "5GaMdgTyOYe" },
-  { id: "id-2", name: "Work", uniqueString: "tGasMSTyOYU" },
-  { id: "id-3", name: "Anon", uniqueString: "x1Ysdz9Kpq" },
-];
-
-function InboxDetail() {
-  const { identity } = useParams<{ identity: string }>();
-  // const navigate = useNavigate();
-  const selected = identities.find((i) => i.uniqueString === identity);
-  const resolved = selected ?? identities[0];
-
-  const [isEditingRoomUniqueString, setIsEditingRoomUniqueString] =
-    useState(false);
-  const [roomUniqueString, setRoomUniqueString] = useState(
-    resolved.uniqueString,
+function isValidRoomMessage(
+  message: RoomMessage | null,
+): message is RoomMessage {
+  return Boolean(
+    message &&
+    message.id.trim().length > 0 &&
+    message.room_id.trim().length > 0 &&
+    message.from_unique.trim().length > 0 &&
+    message.text.trim().length > 0,
   );
-  const [roomUniqueStringDraft, setRoomUniqueStringDraft] = useState(
-    resolved.uniqueString,
-  );
+}
 
-  if (!identity || !selected) {
-    return <Navigate to={`/in/${resolved.uniqueString}`} replace />;
+function normalizeRoomMessage(payload: unknown): RoomMessage | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
   }
 
-  const filtered = messages.filter((m) => m.identity === resolved.uniqueString);
+  const record = payload as Partial<RoomMessage>;
+
+  if (
+    typeof record.id !== "string" ||
+    typeof record.created_at !== "string" ||
+    typeof record.updated_at !== "string" ||
+    typeof record.room_id !== "string" ||
+    typeof record.from_unique !== "string" ||
+    typeof record.text !== "string"
+  ) {
+    return null;
+  }
+
+  const normalizedMessage: RoomMessage = {
+    id: record.id.trim(),
+    created_at: record.created_at.trim(),
+    updated_at: record.updated_at.trim(),
+    room_id: record.room_id.trim(),
+    from_unique: record.from_unique.trim(),
+    text: record.text.trim(),
+  };
+
+  return isValidRoomMessage(normalizedMessage) ? normalizedMessage : null;
+}
+
+function InboxDetailView({ roomId: uniqueString }: { roomId: string }) {
+  const [messages, setMessages] = useState<RoomMessage[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [now, setNow] = useState<number>(() => Date.now());
+  const [isEditingRoomUniqueString, setIsEditingRoomUniqueString] =
+    useState(false);
+  const [roomUniqueString, setRoomUniqueString] = useState(uniqueString);
+  const [roomUniqueStringDraft, setRoomUniqueStringDraft] =
+    useState(uniqueString);
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const reconnectTimerRef = useRef<number | null>(null);
+  const reconnectAttemptsRef = useRef<number>(0);
+
+  function formatElapsedTime(createdAt: string) {
+    const createdTime = new Date(createdAt).getTime();
+
+    if (Number.isNaN(createdTime)) {
+      return createdAt;
+    }
+
+    const elapsedMilliseconds = now - createdTime;
+    const elapsedSeconds = Math.floor(elapsedMilliseconds / 1000);
+
+    if (elapsedSeconds < 60) {
+      return `${elapsedSeconds}s`;
+    }
+
+    const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+    if (elapsedMinutes < 60) {
+      return `${elapsedMinutes}min`;
+    }
+
+    const elapsedHours = Math.floor(elapsedMinutes / 60);
+    if (elapsedHours < 24) {
+      return `${elapsedHours}hr${elapsedHours === 1 ? "" : "s"}`;
+    }
+
+    const elapsedDays = Math.floor(elapsedHours / 24);
+    if (elapsedDays < 30) {
+      return `${elapsedDays}d${elapsedDays === 1 ? "" : "s"}`;
+    }
+
+    const elapsedMonths = Math.floor(elapsedDays / 30);
+    if (elapsedMonths < 12) {
+      return `${elapsedMonths}mo${elapsedMonths === 1 ? "" : "s"}`;
+    }
+
+    const elapsedYears = Math.floor(elapsedMonths / 12);
+    return `${elapsedYears}yr${elapsedYears === 1 ? "" : "s"}`;
+  }
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setNow(Date.now());
+    }, 15000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function fetchMessages() {
+      setIsLoading(true);
+      setLoadError(null);
+
+      try {
+        const response = await api.get<RoomMessage[]>(
+          `/api/rooms/${encodeURIComponent(uniqueString)}/messages`,
+        );
+
+        if (!isActive) {
+          return;
+        }
+
+        const nextMessages = Array.isArray(response.data)
+          ? response.data.filter(isValidRoomMessage)
+          : [];
+
+        setMessages(nextMessages);
+        setLoadError(null);
+      } catch {
+        if (isActive) {
+          setMessages([]);
+          setLoadError("Unable to load messages for this identity.");
+        }
+      } finally {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void fetchMessages();
+
+    return () => {
+      isActive = false;
+    };
+  }, [uniqueString]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const clearReconnectTimer = () => {
+      if (reconnectTimerRef.current !== null) {
+        window.clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+    };
+
+    const connect = () => {
+      clearReconnectTimer();
+
+      const eventSource = new EventSource(
+        `/api/rooms/${encodeURIComponent(uniqueString)}/messages/receive`,
+        {
+          withCredentials: true,
+        },
+      );
+
+      eventSourceRef.current = eventSource;
+
+      eventSource.onopen = () => {
+        reconnectAttemptsRef.current = 0;
+      };
+
+      eventSource.onmessage = (event) => {
+        if (!event.data || event.data.trim().length === 0) {
+          return;
+        }
+
+        try {
+          const nextMessage = normalizeRoomMessage(JSON.parse(event.data));
+          console.log("Received message event:", {
+            rawData: event.data,
+            nextMessage,
+          });
+          if (!nextMessage) {
+            return;
+          }
+
+          setMessages((currentMessages) => {
+            const withoutDuplicate = currentMessages.filter(
+              (message) => message.id !== nextMessage.id,
+            );
+
+            return [nextMessage, ...withoutDuplicate];
+          });
+        } catch (error) {
+          console.error("Error processing message event:", {
+            error,
+            rawData: event.data,
+          });
+        }
+      };
+
+      eventSource.onerror = () => {
+        if (!isActive) {
+          return;
+        }
+
+        eventSource.close();
+
+        const attempt = reconnectAttemptsRef.current + 1;
+        reconnectAttemptsRef.current = attempt;
+
+        const retryDelay = Math.min(1000 * attempt, 5000);
+        reconnectTimerRef.current = window.setTimeout(() => {
+          if (isActive) {
+            connect();
+          }
+        }, retryDelay);
+      };
+    };
+
+    connect();
+
+    return () => {
+      isActive = false;
+      clearReconnectTimer();
+      eventSourceRef.current?.close();
+      eventSourceRef.current = null;
+    };
+  }, [uniqueString]);
+
+  const filtered = messages;
 
   return (
     <section className="relative min-h-screen bg-gray-300 text-center text-gray-800 dark:bg-gray-800 dark:text-gray-300">
@@ -263,15 +383,23 @@ function InboxDetail() {
               </div>
             </div>
           </div>
-          <div className="mt-0 overflow-auto no-scrollbar max-h-[calc(80vh)]   border border-gray-500/40 bg-gray-200/70 p-4 shadow-sm dark:bg-gray-700/70 sm:p-6 lg:max-h-[calc(100vh-4rem)]">
-            {filtered.length > 0 ? (
+          <div className="mt-0 overflow-auto no-scrollbar max-h-[90vh]  border border-gray-500/40 bg-gray-200/70 p-4 shadow-sm dark:bg-gray-700/70 sm:p-6 lg:max-h-[calc(100vh-2rem)]">
+            {isLoading ? (
+              <div className="flex items-center max-h-screen justify-center border border-gray-500/50 bg-gray-200/70 dark:bg-gray-700/70 px-3 py-3 text-left">
+                <span className="text-sm opacity-80">Loading messages...</span>
+              </div>
+            ) : loadError ? (
+              <div className="flex items-center max-h-screen justify-center border border-gray-500/50 bg-gray-200/70 dark:bg-gray-700/70 px-3 py-3 text-left">
+                <span className="text-sm opacity-80">{loadError}</span>
+              </div>
+            ) : filtered.length > 0 ? (
               filtered.map((m) => {
                 return (
                   <Message
                     key={m.id}
-                    identity={m.identity}
-                    text={m.body}
-                    time={m.time}
+                    identity={m.from_unique}
+                    text={m.text}
+                    time={formatElapsedTime(m.created_at)}
                   />
                 );
               })
@@ -287,6 +415,16 @@ function InboxDetail() {
       </div>
     </section>
   );
+}
+
+function InboxDetail() {
+  const { identity } = useParams<{ identity: string }>();
+
+  if (!identity) {
+    return <Navigate to="/in" replace />;
+  }
+
+  return <InboxDetailView key={identity} roomId={identity} />;
 }
 
 export default InboxDetail;
