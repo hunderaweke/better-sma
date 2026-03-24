@@ -1,16 +1,24 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
   ArrowUpLeft,
   Search,
+  Plus,
 } from "lucide-react";
 import ToggleTheme from "../components/ToggleTheme";
 import RoomCard from "../components/RoomCard";
 import api from "../utils/api";
 import type { Room } from "../types";
+import { notifyError, notifyInfo, notifySuccess } from "../utils/notifications";
+import { isIdentityExpired, readStoredIdentity } from "../utils/identity";
+import {
+  clearSelectedRoomFromStorage,
+  readSelectedRoomFromStorage,
+  saveSelectedRoomToStorage,
+} from "../utils/roomStorage";
 
 type RoomsResponse = {
   meta?: {
@@ -26,21 +34,6 @@ type RoomsResponse = {
 };
 
 const PAGE_SIZE = 20;
-const SELECTED_ROOM_STORAGE_KEY = "better-sma:selected-room";
-
-function readSelectedRoomFromStorage(): Room | null {
-  const storedRoom = localStorage.getItem(SELECTED_ROOM_STORAGE_KEY);
-
-  if (!storedRoom) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(storedRoom) as Room;
-  } catch {
-    return null;
-  }
-}
 
 function buildPageItems(
   currentPage: number,
@@ -84,7 +77,10 @@ function Rooms() {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [copiedRoomCode, setCopiedRoomCode] = useState<string | null>(null);
+  const [pendingDeleteRoom, setPendingDeleteRoom] = useState<Room | null>(null);
+  const [isCreatingRoom, setIsCreatingRoom] = useState<boolean>(false);
   const copiedResetTimerRef = useRef<number | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     let isActive = true;
@@ -120,9 +116,7 @@ function Rooms() {
             ? nextRooms.find((room) => room.id === currentSelectedRoom.id)
             : null;
 
-          return (
-            freshSelectedRoom ?? currentSelectedRoom ?? nextRooms[0] ?? null
-          );
+          return freshSelectedRoom ?? nextRooms[0] ?? null;
         });
         setPage(payload.meta?.page ?? page);
         setTotalPages(payload.meta?.total_pages ?? 1);
@@ -153,14 +147,11 @@ function Rooms() {
 
   useEffect(() => {
     if (selectedRoom) {
-      localStorage.setItem(
-        SELECTED_ROOM_STORAGE_KEY,
-        JSON.stringify(selectedRoom),
-      );
+      saveSelectedRoomToStorage(selectedRoom);
       return;
     }
 
-    localStorage.removeItem(SELECTED_ROOM_STORAGE_KEY);
+    clearSelectedRoomFromStorage();
   }, [selectedRoom]);
 
   useEffect(() => {
@@ -177,19 +168,153 @@ function Rooms() {
     setSearchTerm(searchInput.trim());
   };
 
-  const copyRoomCode = async (code: string) => {
-    const link = `${window.location.origin}/in/${code}`;
-    await navigator.clipboard.writeText(link);
+  const createRoom = async () => {
+    const storedIdentity = readStoredIdentity();
 
-    if (copiedResetTimerRef.current) {
-      window.clearTimeout(copiedResetTimerRef.current);
+    if (!storedIdentity || isIdentityExpired(storedIdentity)) {
+      return;
     }
 
-    setCopiedRoomCode(code);
-    copiedResetTimerRef.current = window.setTimeout(() => {
-      setCopiedRoomCode(null);
-      copiedResetTimerRef.current = null;
-    }, 1200);
+    setIsCreatingRoom(true);
+
+    try {
+      const response = await api.post<Room>("/api/rooms", {});
+      const createdRoom = response.data;
+
+      if (!createdRoom?.unique_string) {
+        return;
+      }
+
+      setRooms((currentRooms) => [
+        createdRoom,
+        ...currentRooms.filter((room) => room.id !== createdRoom.id),
+      ]);
+      setSelectedRoom(createdRoom);
+      setPage(1);
+      setSearchInput("");
+      setSearchTerm("");
+      notifySuccess(
+        "Room created",
+        `${createdRoom.name || createdRoom.unique_string} is ready.`,
+      );
+    } catch (error) {
+      console.error("Failed to create room", error);
+      notifyError("Create failed", "We could not create that room.");
+    } finally {
+      setIsCreatingRoom(false);
+    }
+  };
+
+  const copyRoomCode = async (code: string) => {
+    try {
+      const link = `${window.location.origin}/se/${code}`;
+      await navigator.clipboard.writeText(link);
+
+      if (copiedResetTimerRef.current) {
+        window.clearTimeout(copiedResetTimerRef.current);
+      }
+
+      setCopiedRoomCode(code);
+      copiedResetTimerRef.current = window.setTimeout(() => {
+        setCopiedRoomCode(null);
+        copiedResetTimerRef.current = null;
+      }, 1200);
+
+      notifySuccess(
+        "Link copied",
+        "The room send link was copied to your clipboard.",
+      );
+    } catch (error) {
+      console.error("Failed to copy room link", error);
+      notifyError("Copy failed", "We could not copy the room link.");
+    }
+  };
+
+  const openRoomInbox = (room: Room) => {
+    setSelectedRoom(room);
+    notifyInfo("Opening inbox", room.name || room.unique_string);
+    navigate(`/in/${room.unique_string}`);
+  };
+
+  const updateRoomName = async (room: Room, nextName: string) => {
+    const trimmedName = nextName.trim();
+
+    if (!trimmedName) {
+      notifyError("Name required", "Room names cannot be empty.");
+      return;
+    }
+
+    try {
+      await api.put(
+        `/api/rooms/${encodeURIComponent(room.unique_string)}/name`,
+        { name: trimmedName },
+      );
+
+      setRooms((currentRooms) =>
+        currentRooms.map((item) =>
+          item.id === room.id ? { ...item, name: trimmedName } : item,
+        ),
+      );
+
+      setSelectedRoom((currentSelectedRoom) =>
+        currentSelectedRoom
+          ? currentSelectedRoom.id === room.id
+            ? { ...currentSelectedRoom, name: trimmedName }
+            : currentSelectedRoom
+          : currentSelectedRoom,
+      );
+
+      notifySuccess("Room name updated", `Renamed to ${trimmedName}.`);
+    } catch (error) {
+      console.error("Failed to update room name", error);
+      notifyError("Rename failed", "We could not update the room name.");
+    }
+  };
+
+  const requestDeleteRoom = (room: Room) => {
+    setPendingDeleteRoom(room);
+  };
+
+  const confirmDeleteRoom = async () => {
+    if (!pendingDeleteRoom) {
+      return;
+    }
+
+    const roomToDelete = pendingDeleteRoom;
+    setPendingDeleteRoom(null);
+
+    try {
+      await api.delete(
+        `/api/rooms/${encodeURIComponent(roomToDelete.unique_string)}`,
+      );
+
+      const nextRooms = rooms.filter((room) => room.id !== roomToDelete.id);
+      setRooms(nextRooms);
+
+      setSelectedRoom((currentSelectedRoom) => {
+        if (currentSelectedRoom?.id !== roomToDelete.id) {
+          return currentSelectedRoom;
+        }
+
+        const nextRoom = nextRooms[0] ?? null;
+
+        if (nextRoom) {
+          saveSelectedRoomToStorage(nextRoom);
+          return nextRoom;
+        }
+
+        clearSelectedRoomFromStorage();
+        return null;
+      });
+
+      notifySuccess(
+        "Room deleted",
+        `${roomToDelete.name || roomToDelete.unique_string} was removed.`,
+      );
+    } catch (error) {
+      console.error("Failed to delete room", error);
+      notifyError("Delete failed", "We could not delete that room.");
+    }
   };
 
   return (
@@ -227,7 +352,20 @@ function Rooms() {
             >
               <ArrowUpLeft size={60} />
             </Link>
-            <h1 className="text-4xl font-light md:text-6xl">Your Rooms</h1>
+            <div className="flex flex-col items-start gap-3">
+              <h1 className="text-4xl font-light md:text-6xl">Your Rooms</h1>
+              <button
+                type="button"
+                onClick={() => {
+                  void createRoom();
+                }}
+                disabled={isCreatingRoom}
+                className="inline-flex items-center gap-2 border border-gray-500/50 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-300 shadow-sm transition hover:bg-gray-500 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-300 dark:text-gray-800"
+              >
+                <Plus size={16} />
+                {isCreatingRoom ? "Creating..." : "New Room"}
+              </button>
+            </div>
           </div>
           <div className="min-w-0">
             {selectedRoom ? (
@@ -236,8 +374,13 @@ function Rooms() {
                   room={selectedRoom}
                   selected={true}
                   copied={copiedRoomCode === selectedRoom.unique_string}
-                  onCopy={(roomCode) => {
+                  onSelect={openRoomInbox}
+                  onRename={updateRoomName}
+                  onCopy={(roomCode: string) => {
                     void copyRoomCode(roomCode);
+                  }}
+                  onDelete={(room: Room) => {
+                    requestDeleteRoom(room);
                   }}
                 />
               </div>
@@ -355,15 +498,51 @@ function Rooms() {
                 room={room}
                 selected={selectedRoom?.id === room.id}
                 copied={copiedRoomCode === room.unique_string}
-                onSelect={setSelectedRoom}
-                onCopy={(roomCode) => {
+                onRename={updateRoomName}
+                onCopy={(roomCode: string) => {
                   void copyRoomCode(roomCode);
+                }}
+                onDelete={(roomToDelete: Room) => {
+                  requestDeleteRoom(roomToDelete);
+                }}
+                onSelect={(roomToOpen: Room) => {
+                  openRoomInbox(roomToOpen);
                 }}
               />
             ))
           )}
         </div>
       </div>
+
+      {pendingDeleteRoom ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm">
+          <div className="w-full max-w-md border border-gray-500/40 bg-gray-200 p-5 text-left shadow-2xl dark:bg-gray-800 dark:text-gray-100">
+            <h2 className="text-xl font-semibold">Delete room?</h2>
+            <p className="mt-2 text-sm opacity-80">
+              {pendingDeleteRoom.name || pendingDeleteRoom.unique_string} will
+              be permanently removed. This action cannot be undone.
+            </p>
+            <div className="mt-5 flex flex-wrap justify-end gap-3">
+              <button
+                type="button"
+                className="border border-gray-500/40 px-4 py-2 text-sm font-semibold hover:bg-gray-500/20"
+                onClick={() => setPendingDeleteRoom(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="border border-red-600/50 bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                onClick={() => {
+                  void confirmDeleteRoom();
+                }}
+              >
+                Delete room
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

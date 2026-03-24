@@ -6,8 +6,7 @@ function ToggleTheme({ className }: ToggleThemeProps) {
   const [isDark, setIsDark] = useState<boolean>(() => {
     const saved = localStorage.getItem("theme");
     if (saved === "dark") return true;
-    if (saved === "light") return false;
-    return document.documentElement.classList.contains("dark");
+    return false;
   });
 
   useEffect(() => {

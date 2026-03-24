@@ -6,12 +6,27 @@ import {
   Save,
   Settings,
   Share2,
+  Check,
+  Loader2,
+  AlertCircle,
+  Volume2,
   VolumeX,
-  Plus,
+  DoorClosed,
 } from "lucide-react";
 import ToggleTheme from "../components/ToggleTheme";
 import Message from "../components/Message";
 import api from "../utils/api";
+import type { Room } from "../types";
+import {
+  notifyError,
+  notifyInfo,
+  notifySuccess,
+  playNotificationRing,
+} from "../utils/notifications";
+import {
+  readSelectedRoomFromStorage,
+  saveSelectedRoomToStorage,
+} from "../utils/roomStorage";
 
 type RoomMessage = {
   id: string;
@@ -21,6 +36,8 @@ type RoomMessage = {
   from_unique: string;
   text: string;
 };
+
+const MESSAGE_VOICE_MUTED_STORAGE_KEY = "better-sma:message-voice-muted";
 
 function isValidRoomMessage(
   message: RoomMessage | null,
@@ -68,15 +85,87 @@ function InboxDetailView({ roomId: uniqueString }: { roomId: string }) {
   const [messages, setMessages] = useState<RoomMessage[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [copyStatus, setCopyStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
+  const [isMuted, setIsMuted] = useState<boolean>(() => {
+    return localStorage.getItem(MESSAGE_VOICE_MUTED_STORAGE_KEY) === "true";
+  });
   const [now, setNow] = useState<number>(() => Date.now());
-  const [isEditingRoomUniqueString, setIsEditingRoomUniqueString] =
-    useState(false);
-  const [roomUniqueString, setRoomUniqueString] = useState(uniqueString);
-  const [roomUniqueStringDraft, setRoomUniqueStringDraft] =
-    useState(uniqueString);
+  const [roomName, setRoomName] = useState<string>(uniqueString);
+  const [roomNameDraft, setRoomNameDraft] = useState<string>(uniqueString);
+  const [isEditingRoomName, setIsEditingRoomName] = useState(false);
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimerRef = useRef<number | null>(null);
   const reconnectAttemptsRef = useRef<number>(0);
+  const hasShownConnectionErrorRef = useRef<boolean>(false);
+  const isMutedRef = useRef<boolean>(isMuted);
+  const messagesRef = useRef<RoomMessage[]>(messages);
+
+  useEffect(() => {
+    isMutedRef.current = isMuted;
+    localStorage.setItem(MESSAGE_VOICE_MUTED_STORAGE_KEY, String(isMuted));
+
+    if (isMuted) {
+      window.speechSynthesis?.cancel();
+    }
+  }, [isMuted]);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function fetchRoomDetails() {
+      try {
+        const response = await api.get<{ data?: Room[] }>("/api/rooms", {
+          params: {
+            unique_string: uniqueString,
+            page: 1,
+            page_size: 1,
+            sort_by: "created_at",
+            sort_order: "desc",
+          },
+        });
+
+        if (!isActive) {
+          return;
+        }
+
+        const rooms = Array.isArray(response.data?.data)
+          ? response.data.data
+          : [];
+        const nextRoom = rooms.find(
+          (room) => room.unique_string === uniqueString,
+        );
+
+        if (!nextRoom) {
+          return;
+        }
+
+        setRoomName(nextRoom.name || nextRoom.unique_string);
+        setRoomNameDraft(nextRoom.name || nextRoom.unique_string);
+
+        const storedRoom = readSelectedRoomFromStorage();
+        if (storedRoom?.unique_string === nextRoom.unique_string) {
+          saveSelectedRoomToStorage({
+            ...storedRoom,
+            ...nextRoom,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to load room details", error);
+      }
+    }
+
+    void fetchRoomDetails();
+
+    return () => {
+      isActive = false;
+    };
+  }, [uniqueString]);
 
   function formatElapsedTime(createdAt: string) {
     const createdTime = new Date(createdAt).getTime();
@@ -191,6 +280,7 @@ function InboxDetailView({ roomId: uniqueString }: { roomId: string }) {
 
       eventSource.onopen = () => {
         reconnectAttemptsRef.current = 0;
+        hasShownConnectionErrorRef.current = false;
       };
 
       eventSource.onmessage = (event) => {
@@ -206,6 +296,14 @@ function InboxDetailView({ roomId: uniqueString }: { roomId: string }) {
           });
           if (!nextMessage) {
             return;
+          }
+
+          const alreadyExists = messagesRef.current.some(
+            (message) => message.id === nextMessage.id,
+          );
+
+          if (!alreadyExists) {
+            announceNewMessage(nextMessage);
           }
 
           setMessages((currentMessages) => {
@@ -226,6 +324,14 @@ function InboxDetailView({ roomId: uniqueString }: { roomId: string }) {
       eventSource.onerror = () => {
         if (!isActive) {
           return;
+        }
+
+        if (!hasShownConnectionErrorRef.current) {
+          notifyError(
+            "Live updates paused",
+            "We lost the live connection and will keep reconnecting.",
+          );
+          hasShownConnectionErrorRef.current = true;
         }
 
         eventSource.close();
@@ -253,6 +359,83 @@ function InboxDetailView({ roomId: uniqueString }: { roomId: string }) {
   }, [uniqueString]);
 
   const filtered = messages;
+
+  const copyRoomLink = async () => {
+    if (copyStatus === "loading") {
+      return;
+    }
+
+    setCopyStatus("loading");
+
+    try {
+      const link = `${window.location.origin}/se/${uniqueString}`;
+      await navigator.clipboard.writeText(link);
+      setCopyStatus("success");
+      window.setTimeout(() => setCopyStatus("idle"), 1200);
+      notifySuccess(
+        "Link copied",
+        "The room send link was copied to your clipboard.",
+      );
+    } catch (error) {
+      console.error("Failed to copy room link", error);
+      setCopyStatus("error");
+      window.setTimeout(() => setCopyStatus("idle"), 1600);
+      notifyError("Copy failed", "We could not copy the room link.");
+    }
+  };
+
+  const announceNewMessage = (message: RoomMessage) => {
+    notifyInfo("New message", `Received from ${message.from_unique}`);
+
+    if (!isMutedRef.current) {
+      playNotificationRing();
+    }
+  };
+
+  const toggleMute = () => {
+    setIsMuted((currentMuted) => {
+      const nextMuted = !currentMuted;
+      notifyInfo(
+        nextMuted ? "Notifications muted" : "Notifications enabled",
+        nextMuted
+          ? "New message rings are muted."
+          : "New message rings are enabled.",
+      );
+      return nextMuted;
+    });
+  };
+
+  const saveRoomName = async () => {
+    const nextName = roomNameDraft.trim();
+
+    if (!nextName) {
+      notifyError("Name required", "Room names cannot be empty.");
+      return;
+    }
+
+    try {
+      await api.put(`/api/rooms/${encodeURIComponent(uniqueString)}/name`, {
+        name: nextName,
+      });
+
+      setRoomName(nextName);
+      setRoomNameDraft(nextName);
+
+      const storedRoom = readSelectedRoomFromStorage();
+      if (storedRoom?.unique_string === uniqueString) {
+        saveSelectedRoomToStorage({
+          ...storedRoom,
+          name: nextName,
+        });
+      }
+
+      notifySuccess("Room name updated", `Renamed to ${nextName}.`);
+      setIsEditingRoomName(false);
+    } catch (error) {
+      console.error("Failed to update room name", error);
+      notifyError("Rename failed", "We could not update the room name.");
+    }
+  };
 
   return (
     <section className="relative min-h-screen bg-gray-300 text-center text-gray-800 dark:bg-gray-800 dark:text-gray-300">
@@ -292,8 +475,8 @@ function InboxDetailView({ roomId: uniqueString }: { roomId: string }) {
                     to="/rooms"
                     className="inline-flex gap-2 items-center bg-gray-800 text-gray-200 dark:bg-gray-300 dark:text-gray-800 px-4 py-2 text-xs font-semibold tracking-wide shadow-sm"
                   >
-                    <Plus size={16} />
-                    <span className="hidden sm:block">New Room</span>
+                    <DoorClosed size={16} />
+                    <span className="hidden sm:block">Rooms</span>
                   </Link>
                 </div>
                 <ToggleTheme />
@@ -301,52 +484,47 @@ function InboxDetailView({ roomId: uniqueString }: { roomId: string }) {
               <div className="border flex flex-col border-gray-500/50 bg-gray-100/70 p-2 text-left gap-3 dark:bg-gray-800/70">
                 <div className="flex gap-4 flex-row md:items-center md:gap-5 md:text-left">
                   <div className="font-bold md:text-2xl sm:shrink-0">
-                    <span>Room</span>
+                    <span>Room: </span>
                   </div>
 
                   <div className="flex w-full items-stretch gap-2">
                     <span className="inline-flex w-full min-w-0">
-                      {isEditingRoomUniqueString ? (
+                      {isEditingRoomName ? (
                         <input
                           className="w-full border border-gray-500/60 bg-gray-200/70 px-2 py-2 text-gray-800 shadow-md focus:outline-none focus:ring-2 focus:ring-gray-500/40 dark:bg-gray-700/70 dark:text-gray-100"
-                          aria-label="Room unique string"
-                          value={roomUniqueStringDraft}
-                          onChange={(e) =>
-                            setRoomUniqueStringDraft(e.target.value)
-                          }
+                          aria-label="Room name"
+                          value={roomNameDraft}
+                          onChange={(e) => setRoomNameDraft(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              void saveRoomName();
+                            }
+                          }}
                         />
                       ) : (
                         <span className="w-full border border-gray-500/60 bg-gray-200/70 p-2 text-gray-800 dark:bg-gray-700/70 dark:text-gray-100">
-                          {roomUniqueString}
+                          {roomName}
                         </span>
                       )}
                     </span>
                     <button
                       className="inline-flex shrink-0 items-center justify-center border border-gray-500/60 bg-gray-200/70 px-3 py-2 text-gray-800 shadow-sm dark:bg-gray-700/70 dark:text-gray-100"
                       aria-label={
-                        isEditingRoomUniqueString
-                          ? "Save room unique string"
-                          : "Edit room unique string"
+                        isEditingRoomName ? "Save room name" : "Edit room name"
                       }
                       type="button"
                       onClick={() => {
-                        if (isEditingRoomUniqueString) {
-                          const next = roomUniqueStringDraft.trim();
-                          setRoomUniqueString(
-                            next.length > 0 ? next : roomUniqueString,
-                          );
-                          setRoomUniqueStringDraft(
-                            next.length > 0 ? next : roomUniqueString,
-                          );
-                          setIsEditingRoomUniqueString(false);
+                        if (isEditingRoomName) {
+                          void saveRoomName();
                           return;
                         }
 
-                        setRoomUniqueStringDraft(roomUniqueString);
-                        setIsEditingRoomUniqueString(true);
+                        setRoomNameDraft(roomName);
+                        setIsEditingRoomName(true);
                       }}
                     >
-                      {isEditingRoomUniqueString ? (
+                      {isEditingRoomName ? (
                         <Save size={16} />
                       ) : (
                         <Edit3 size={16} />
@@ -359,9 +537,30 @@ function InboxDetailView({ roomId: uniqueString }: { roomId: string }) {
                     className="border border-gray-600/60 bg-gray-800 text-gray-200 dark:bg-gray-300 dark:text-gray-800 flex items-center justify-center gap-3 md:p-4 col-span-1 lg:col-span-2"
                     type="button"
                     aria-label="Share"
+                    onClick={() => {
+                      void copyRoomLink();
+                    }}
+                    aria-live="polite"
                   >
-                    <Share2 size={22} />
-                    <span className="hidden lg:block">Copy link</span>
+                    {copyStatus === "loading" && (
+                      <Loader2 size={22} className="animate-spin" />
+                    )}
+                    {copyStatus === "success" && (
+                      <Check size={22} className="text-green-500" />
+                    )}
+                    {copyStatus === "error" && (
+                      <AlertCircle size={22} className="text-red-500" />
+                    )}
+                    {copyStatus === "idle" && <Share2 size={22} />}
+                    <span className="hidden lg:block">
+                      {copyStatus === "loading"
+                        ? "Copying..."
+                        : copyStatus === "success"
+                          ? "Copied"
+                          : copyStatus === "error"
+                            ? "Copy failed"
+                            : "Copy link"}
+                    </span>
                   </button>
                   <button
                     className="border border-gray-600/60 bg-gray-800 text-gray-200 dark:bg-gray-300 dark:text-gray-800 flex items-center justify-center gap-3 p-2 md:p-4"
@@ -374,10 +573,15 @@ function InboxDetailView({ roomId: uniqueString }: { roomId: string }) {
                   <button
                     className="border border-gray-600/60 bg-gray-800 text-gray-200 dark:bg-gray-300 dark:text-gray-800 flex items-center justify-center gap-3 p-2 md:p-4"
                     type="button"
-                    aria-label="Mute"
+                    aria-label={
+                      isMuted ? "Unmute message voice" : "Mute message voice"
+                    }
+                    onClick={toggleMute}
                   >
-                    <VolumeX size={22} />
-                    <span className="hidden lg:block">Mute</span>
+                    {isMuted ? <VolumeX size={22} /> : <Volume2 size={22} />}
+                    <span className="hidden lg:block">
+                      {isMuted ? "Unmute" : "Mute"}
+                    </span>
                   </button>
                 </div>
               </div>

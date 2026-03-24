@@ -54,7 +54,9 @@ export default function Message(props: MessageProps) {
           <IdentityTag uniqueString={props.identity} />
         </div>
         <div className="bg-gray-300 dark:bg-gray-700 border mx-3 p-3 flex gap-5">
-          <p className="flex-1">{props.text}</p>
+            <p className="min-w-0 flex-1 max-w-full whitespace-normal break-words">
+              {props.text}
+            </p>
           <div className="flex flex-col justify-between items-center gap-2">
             <p className="flex items-end text-xs">{props.time}</p>
             <button

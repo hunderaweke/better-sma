@@ -1,23 +1,73 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import ToggleTheme from "../components/ToggleTheme";
 import api from "../utils/api";
 import { SendIcon, Loader2, CheckIcon, AlertCircle } from "lucide-react";
 import getVibrantColor from "../utils/color";
+import {
+  getOrCreateStoredIdentity,
+  isIdentityExpired,
+  readStoredIdentity,
+  type StoredIdentity,
+} from "../utils/identity";
+
 function Send() {
   const { identity } = useParams();
   const [message, setMessage] = useState("");
   const [sendStatus, setSendStatus] = useState<
     "idle" | "loading" | "success" | "error"
   >("idle");
+  const [senderIdentity, setSenderIdentity] = useState<StoredIdentity | null>(
+    null,
+  );
+  const [isPreparingIdentity, setIsPreparingIdentity] = useState(true);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function prepareIdentity() {
+      try {
+        const storedIdentity = readStoredIdentity();
+
+        if (storedIdentity && !isIdentityExpired(storedIdentity)) {
+          if (isActive) {
+            setSenderIdentity(storedIdentity);
+          }
+          return;
+        }
+
+        const nextIdentity = await getOrCreateStoredIdentity();
+
+        if (isActive) {
+          setSenderIdentity(nextIdentity);
+        }
+      } catch (error) {
+        console.error("Failed to prepare sender identity", error);
+        if (isActive) {
+          setSenderIdentity(null);
+        }
+      } finally {
+        if (isActive) {
+          setIsPreparingIdentity(false);
+        }
+      }
+    }
+
+    void prepareIdentity();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   const handleSend = async () => {
     if (!message.trim() || !identity) return;
 
     setSendStatus("loading");
     try {
+      const currentIdentity = await getOrCreateStoredIdentity();
       await api.post(`/api/rooms/${identity}/messages`, {
-        from_unique: "j_3f7m56SR6H", // Note: Adjust this if you get identity info from context or state later
+        from_unique: currentIdentity.unique_string,
         text: message,
       });
       setMessage("");
@@ -62,7 +112,7 @@ function Send() {
           <h1 className="text-sm lg:text-3xl font-normal text-left flex items-baseline gap-2">
             Send to
             {identity && (
-              <div className="text-gray-700/80 flex items-center font-light">
+              <div className="text-gray-700/80 dark:text-gray-300 flex items-center font-light">
                 <span className="border-1 border-r-0 px-4" style={{}}>
                   {identity}
                 </span>
@@ -77,6 +127,12 @@ function Send() {
             )}
           </h1>
         </div>
+
+        {isPreparingIdentity && (
+          <div className="border border-gray-800/50 dark:border-gray-500/50 bg-transparent px-4 py-3 text-left text-xs uppercase tracking-[0.12em] text-gray-600 dark:text-gray-400">
+            Preparing your sender identity...
+          </div>
+        )}
 
         <div className="flex flex-col w-full">
           <div className="text-[11px] text-left text-gray-600 dark:text-gray-400 mb-1">
@@ -98,8 +154,10 @@ function Send() {
             />
             <button
               onClick={handleSend}
-              disabled={sendStatus === "loading" || !message.trim()}
-              className="w-full h-12 sm:h-auto sm:w-[100px] shrink-0 bg-transparent border border-gray-800 dark:border-gray-500 p-4 transition-colors hover:bg-gray-400/20 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm flex items-center justify-center p-0!"
+              disabled={
+                sendStatus === "loading" || !message.trim() || !senderIdentity
+              }
+              className="w-full h-12 sm:h-auto sm:w-[100px] shrink-0 bg-transparent border border-gray-800 dark:border-gray-500 p-4 transition-colors hover:bg-gray-400/20 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm flex items-center justify-center"
             >
               {sendStatus === "loading" && <Loader2 className="animate-spin" />}
               {sendStatus === "success" && (

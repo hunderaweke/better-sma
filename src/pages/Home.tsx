@@ -1,11 +1,11 @@
 import IdentityTag from "../components/IdentityTag";
 import ToggleTheme from "../components/ToggleTheme";
 import { useEffect, useState } from "react";
-import { CircleUserRound, Inbox, HatGlasses, LogOut } from "lucide-react";
+import { CircleUserRound, Inbox, LogOut, DoorOpen } from "lucide-react";
 import { SiGithub, SiGoogle } from "@icons-pack/react-simple-icons";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import type { Identity } from "../types";
 import api from "../utils/api";
+import { readSelectedRoomFromStorage } from "../utils/roomStorage";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
 const authStatusUrl =
@@ -71,27 +71,30 @@ function getDisplayName(authData: unknown) {
 }
 
 function Home() {
-  const identities: Identity[] = [
-    { id: "id-1", name: "Primary", uniqueString: "5GaMdgTyOYe" },
-    { id: "id-2", name: "Work", uniqueString: "tGasMSTyOYU" },
-    { id: "id-3", name: "Anon", uniqueString: "x1Ysdz9Kpq" },
-  ];
-  const [selectedId] = useState<string | undefined>(identities[0]?.id);
-  const selected = identities.find((i) => i.id === selectedId);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(getStoredAuthState());
   const [loggedInUserName, setLoggedInUserName] = useState<string | null>(null);
+  const [analytics, setAnalytics] = useState<{
+    identities: number;
+    messages: number;
+    users: number;
+    rooms: number;
+  } | null>(null);
   const location = useLocation();
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const defaultRoom = readSelectedRoomFromStorage();
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const errorCode = params.get("error");
     const nextError = parseAuthError(errorCode);
 
-    setTimeout(() => setError(nextError), 0);
+    const errorTimerId = window.setTimeout(() => {
+      setError(nextError);
+    }, 0);
 
     if (!nextError) {
-      return;
+      return () => window.clearTimeout(errorTimerId);
     }
 
     const timeoutId = window.setTimeout(() => {
@@ -99,8 +102,32 @@ function Home() {
     }, 3000);
 
     navigate(location.pathname, { replace: true });
-    return () => window.clearTimeout(timeoutId);
-  }, [location.pathname]);
+    return () => {
+      window.clearTimeout(errorTimerId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [location.pathname, location.search, navigate]);
+
+  const handleOpenInbox = () => {
+    try {
+      const storedRoom = localStorage.getItem("better-sma:selected-room");
+
+      if (storedRoom) {
+        const parsed = JSON.parse(storedRoom) as { unique_string?: string };
+        if (parsed.unique_string === "") {
+          return;
+        }
+        if (parsed.unique_string) {
+          navigate(`/in/${parsed.unique_string}`);
+          return;
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    navigate("/in");
+  };
   useEffect(() => {
     let isActive = true;
 
@@ -146,6 +173,33 @@ function Home() {
     }
 
     void checkAuth();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadAnalytics() {
+      try {
+        const response = await api.get<{
+          identities: number;
+          messages: number;
+          users: number;
+          rooms: number;
+        }>("/api/analytics");
+
+        if (isActive) {
+          setAnalytics(response.data);
+        }
+      } catch (error) {
+        console.error("Failed to load analytics", error);
+      }
+    }
+
+    void loadAnalytics();
 
     return () => {
       isActive = false;
@@ -216,33 +270,63 @@ function Home() {
         <h3 className="text-xs md:text-xl mt-3 font-extralight">
           Manage Anonymous messages in the best way{" "}
         </h3>
-        <p className="text-xs mt-3">
-          <span className="font-bold">100</span> Active Users,{" "}
-          <span className="font-bold">100</span> Identities,{" "}
-          <span className="font-bold">100</span> Msg and Counting...
-        </p>
+        <div className="mt-4 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+          <div className="border border-gray-500/40 bg-gray-200/80 px-3 py-2 dark:bg-gray-900/50">
+            <div className="text-[10px] uppercase tracking-[0.1em] opacity-70">
+              Users
+            </div>
+            <div className="mt-1 text-lg font-semibold">
+              {analytics?.users ?? 0}
+            </div>
+          </div>
+          <div className="border border-gray-500/40 bg-gray-200/80 px-3 py-2 dark:bg-gray-900/50">
+            <div className="text-[10px] uppercase tracking-[0.1em] opacity-70">
+              Identities
+            </div>
+            <div className="mt-1 text-lg font-semibold">
+              {analytics?.identities ?? 0}
+            </div>
+          </div>
+          <div className="border border-gray-500/40 bg-gray-200/80 px-3 py-2 dark:bg-gray-900/50">
+            <div className="text-[10px] uppercase tracking-[0.1em] opacity-70">
+              Messages
+            </div>
+            <div className="mt-1 text-lg font-semibold">
+              {analytics?.messages ?? 0}
+            </div>
+          </div>
+          <div className="border border-gray-500/40 bg-gray-200/80 px-3 py-2 dark:bg-gray-900/50">
+            <div className="text-[10px] uppercase tracking-[0.1em] opacity-70">
+              Rooms
+            </div>
+            <div className="mt-1 text-lg font-semibold">
+              {analytics?.rooms ?? 0}
+            </div>
+          </div>
+        </div>
         <div className="mt-6 flex flex-wrap gap-4 text-[11px] sm:text-sm justify-center items-center">
           {isLoggedIn ? (
             <>
               <Link
-                className="items-center justify-center py-4 px-6 dark:bg-gray-300 dark:text-gray-800 text-gray-300 bg-gray-800 backdrop-blur-3xl font-bold hover:bg-gray-500"
-                to="/id"
+                className="items-center justify-center py-4 px-6 dark:bg-gray-300 cursor-pointer dark:text-gray-800 text-gray-300 bg-gray-800 backdrop-blur-3xl font-bold hover:bg-gray-500"
+                to="/rooms"
               >
-                <HatGlasses className="inline mx-2" />
-                Identities
+                <DoorOpen className="inline mx-2" />
+                Rooms
               </Link>
-              <Link
-                className="dark:bg-gray-300 dark:text-gray-800 text-gray-300 bg-gray-800  items-center justify-center py-4 px-6 backdrop-blur-3xl font-bold hover:bg-gray-500"
-                to={selected ? `/in?identity=${selected.uniqueString}` : "/in"}
+              <button
+                type="button"
+                className="dark:bg-gray-300 dark:text-gray-800 cursor-pointer text-gray-300 bg-gray-800  items-center justify-center py-4 px-6 backdrop-blur-3xl font-bold hover:bg-gray-500"
+                onClick={handleOpenInbox}
               >
                 <Inbox className="inline mx-2" />
                 Your Inbox
-                {selected && (
+                {defaultRoom && (
                   <div className="absolute dark:text-gray-300 font-light text-gray-800 -right-10 -bottom-4">
-                    <IdentityTag uniqueString={selected.uniqueString} />
+                    <IdentityTag uniqueString={defaultRoom.unique_string} />
                   </div>
                 )}
-              </Link>
+              </button>
             </>
           ) : (
             <>
