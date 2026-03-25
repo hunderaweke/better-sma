@@ -10,7 +10,6 @@ import {
 } from "../utils/identity";
 import {
   clearSelectedRoomFromStorage,
-  readSelectedRoomFromStorage,
   saveSelectedRoomToStorage,
 } from "../utils/roomStorage";
 import type { Room } from "../types";
@@ -55,16 +54,10 @@ export function GlobalInit() {
           ? storedIdentity
           : await createStoredIdentity();
 
-      const selectedRoom = readSelectedRoomFromStorage();
-
-      if (selectedRoom) {
-        return;
-      }
-
       const identity = activeIdentity.unique_string;
 
       try {
-        const roomsRes = await api.get("/api/rooms", {
+        const roomsRequest = api.get("/api/rooms", {
           params: {
             page: 1,
             page_size: 1,
@@ -72,6 +65,11 @@ export function GlobalInit() {
             sort_order: "desc",
           },
         });
+        const minimumDelay = new Promise((resolve) => {
+          window.setTimeout(resolve, 3000);
+        });
+
+        const [roomsRes] = await Promise.all([roomsRequest, minimumDelay]);
         const payloadData = roomsRes.data?.data;
         const rooms = Array.isArray(payloadData) ? payloadData : [];
         const ownedRooms = identity
