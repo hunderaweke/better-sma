@@ -100,7 +100,7 @@ function Home() {
 
     const errorTimerId = window.setTimeout(() => {
       setError(nextError);
-    }, 0);
+    }, 10000);
 
     if (!nextError) {
       return () => window.clearTimeout(errorTimerId);
