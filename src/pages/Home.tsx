@@ -137,6 +137,17 @@ function Home() {
 
     navigate("/in");
   };
+
+  const handleAuthRedirect = async (authUrl: string) => {
+    try {
+      await api.get(authUrl);
+    } catch {
+      // keep the navigation behavior even if the preflight request fails
+    }
+
+    window.location.assign(authUrl);
+  };
+
   useEffect(() => {
     let isActive = true;
 
@@ -347,20 +358,26 @@ function Home() {
             </>
           ) : (
             <>
-              <a
-                className="inline-flex items-center justify-center gap-2 py-4 px-6 dark:bg-gray-300 dark:text-gray-800 text-gray-300 bg-gray-800 backdrop-blur-3xl font-bold hover:bg-gray-500"
-                href={googleAuthUrl}
+              <button
+                type="button"
+                className="inline-flex cursor-pointer items-center justify-center gap-2 py-4 px-6 dark:bg-gray-300 dark:text-gray-800 text-gray-300 bg-gray-800 backdrop-blur-3xl font-bold hover:bg-gray-500"
+                onClick={() => {
+                  void handleAuthRedirect(googleAuthUrl);
+                }}
               >
                 <SiGoogle className="h-4 w-4" />
                 Continue by Google
-              </a>
-              <a
-                className="inline-flex items-center justify-center gap-2 py-4 px-6 dark:bg-gray-300 dark:text-gray-800 text-gray-300 bg-gray-800 backdrop-blur-3xl font-bold hover:bg-gray-500"
-                href={githubAuthUrl}
+              </button>
+              <button
+                type="button"
+                className="inline-flex cursor-pointer items-center justify-center gap-2 py-4 px-6 dark:bg-gray-300 dark:text-gray-800 text-gray-300 bg-gray-800 backdrop-blur-3xl font-bold hover:bg-gray-500"
+                onClick={() => {
+                  void handleAuthRedirect(githubAuthUrl);
+                }}
               >
                 <SiGithub className="h-4 w-4" />
                 Continue by GitHub
-              </a>
+              </button>
             </>
           )}
         </div>
