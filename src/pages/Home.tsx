@@ -5,7 +5,10 @@ import { CircleUserRound, Inbox, LogOut, DoorOpen } from "lucide-react";
 import { SiGithub, SiGoogle } from "@icons-pack/react-simple-icons";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import api from "../utils/api";
-import { readSelectedRoomFromStorage } from "../utils/roomStorage";
+import {
+  clearSelectedRoomFromStorage,
+  readSelectedRoomFromStorage,
+} from "../utils/roomStorage";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
 const authStatusUrl =
@@ -79,6 +82,12 @@ function Home() {
     users: number;
     rooms: number;
   } | null>(null);
+  const [displayedAnalytics, setDisplayedAnalytics] = useState({
+    identities: 0,
+    messages: 0,
+    users: 0,
+    rooms: 0,
+  });
   const location = useLocation();
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -180,6 +189,38 @@ function Home() {
   }, []);
 
   useEffect(() => {
+    if (!analytics) {
+      return;
+    }
+
+    let frameId = 0;
+    const startTime = window.performance.now();
+    const duration = 900;
+
+    const animate = (timestamp: number) => {
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+
+      setDisplayedAnalytics({
+        identities: Math.round(analytics.identities * eased),
+        messages: Math.round(analytics.messages * eased),
+        users: Math.round(analytics.users * eased),
+        rooms: Math.round(analytics.rooms * eased),
+      });
+
+      if (progress < 1) {
+        frameId = window.requestAnimationFrame(animate);
+      }
+    };
+
+    frameId = window.requestAnimationFrame(animate);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [analytics]);
+
+  useEffect(() => {
     let isActive = true;
 
     async function loadAnalytics() {
@@ -207,6 +248,7 @@ function Home() {
   }, []);
 
   function handleLogout() {
+    clearSelectedRoomFromStorage();
     setIsLoggedIn(false);
     setLoggedInUserName(null);
     api.post(logoutUrl, {}).catch(() => {});
@@ -267,43 +309,18 @@ function Home() {
           Welcome to
           <span className="italic font-bold font-garamond"> better</span> S.M.A
         </h1>
-        <h3 className="text-xs md:text-xl mt-3 font-extralight">
-          Manage Anonymous messages in the best way{" "}
+        <h3 className="text-xs md:text-2xl mt-3 font-light">
+          Better Anon Messages{" "}
         </h3>
-        <div className="mt-4 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
-          <div className="border border-gray-500/40 bg-gray-200/80 px-3 py-2 dark:bg-gray-900/50">
-            <div className="text-[10px] uppercase tracking-[0.1em] opacity-70">
-              Users
-            </div>
-            <div className="mt-1 text-lg font-semibold">
-              {analytics?.users ?? 0}
-            </div>
-          </div>
-          <div className="border border-gray-500/40 bg-gray-200/80 px-3 py-2 dark:bg-gray-900/50">
-            <div className="text-[10px] uppercase tracking-[0.1em] opacity-70">
-              Identities
-            </div>
-            <div className="mt-1 text-lg font-semibold">
-              {analytics?.identities ?? 0}
-            </div>
-          </div>
-          <div className="border border-gray-500/40 bg-gray-200/80 px-3 py-2 dark:bg-gray-900/50">
-            <div className="text-[10px] uppercase tracking-[0.1em] opacity-70">
-              Messages
-            </div>
-            <div className="mt-1 text-lg font-semibold">
-              {analytics?.messages ?? 0}
-            </div>
-          </div>
-          <div className="border border-gray-500/40 bg-gray-200/80 px-3 py-2 dark:bg-gray-900/50">
-            <div className="text-[10px] uppercase tracking-[0.1em] opacity-70">
-              Rooms
-            </div>
-            <div className="mt-1 text-lg font-semibold">
-              {analytics?.rooms ?? 0}
-            </div>
-          </div>
-        </div>
+        <p className="text-xs mt-5">
+          <span className="font-bold">{displayedAnalytics.users}</span> Active
+          users,{" "}
+          <span className="font-bold">{displayedAnalytics.identities}</span>{" "}
+          Identities,{" "}
+          <span className="font-bold">{displayedAnalytics.messages}</span> Sent
+          Msgs, <span className="font-bold">{displayedAnalytics.rooms}</span>{" "}
+          Rooms
+        </p>
         <div className="mt-6 flex flex-wrap gap-4 text-[11px] sm:text-sm justify-center items-center">
           {isLoggedIn ? (
             <>
@@ -335,14 +352,14 @@ function Home() {
                 href={googleAuthUrl}
               >
                 <SiGoogle className="h-4 w-4" />
-                Continue with Google
+                Continue by Google
               </a>
               <a
                 className="inline-flex items-center justify-center gap-2 py-4 px-6 dark:bg-gray-300 dark:text-gray-800 text-gray-300 bg-gray-800 backdrop-blur-3xl font-bold hover:bg-gray-500"
                 href={githubAuthUrl}
               >
                 <SiGithub className="h-4 w-4" />
-                Continue with GitHub
+                Continue by GitHub
               </a>
             </>
           )}

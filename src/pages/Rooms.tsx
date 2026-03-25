@@ -1,13 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  ChevronLeft,
-  ChevronRight,
-  ArrowUpLeft,
-  Search,
-  Plus,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowUpLeft, Plus } from "lucide-react";
 import ToggleTheme from "../components/ToggleTheme";
 import RoomCard from "../components/RoomCard";
 import api from "../utils/api";
@@ -72,13 +65,13 @@ function Rooms() {
   const [totalPages, setTotalPages] = useState<number>(1);
   const [hasNext, setHasNext] = useState<boolean>(false);
   const [hasPrev, setHasPrev] = useState<boolean>(false);
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [searchInput, setSearchInput] = useState<string>("");
+  const [sortOrder] = useState<"asc" | "desc">("desc");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [copiedRoomCode, setCopiedRoomCode] = useState<string | null>(null);
   const [pendingDeleteRoom, setPendingDeleteRoom] = useState<Room | null>(null);
   const [isCreatingRoom, setIsCreatingRoom] = useState<boolean>(false);
+  const [roomsRefreshKey, setRoomsRefreshKey] = useState<number>(0);
   const copiedResetTimerRef = useRef<number | null>(null);
   const navigate = useNavigate();
 
@@ -104,6 +97,7 @@ function Rooms() {
         }
 
         const payload = res.data;
+        console.log("Fetched rooms payload", payload.data);
         const nextRooms = Array.isArray(payload.data) ? payload.data : [];
 
         setRooms(nextRooms);
@@ -143,7 +137,7 @@ function Rooms() {
     return () => {
       isActive = false;
     };
-  }, [page, sortOrder, searchTerm]);
+  }, [page, sortOrder, searchTerm, roomsRefreshKey]);
 
   useEffect(() => {
     if (selectedRoom) {
@@ -162,11 +156,11 @@ function Rooms() {
     };
   }, []);
 
-  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPage(1);
-    setSearchTerm(searchInput.trim());
-  };
+  // const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
+  //   event.preventDefault();
+  //   setPage(1);
+  //   setSearchTerm(searchInput.trim());
+  // };
 
   const createRoom = async () => {
     const storedIdentity = readStoredIdentity();
@@ -185,14 +179,10 @@ function Rooms() {
         return;
       }
 
-      setRooms((currentRooms) => [
-        createdRoom,
-        ...currentRooms.filter((room) => room.id !== createdRoom.id),
-      ]);
       setSelectedRoom(createdRoom);
       setPage(1);
-      setSearchInput("");
       setSearchTerm("");
+      setRoomsRefreshKey((currentRefreshKey) => currentRefreshKey + 1);
       notifySuccess(
         "Room created",
         `${createdRoom.name || createdRoom.unique_string} is ready.`,
@@ -339,58 +329,50 @@ function Rooms() {
         />
       </svg>
 
-      <div className="absolute z-20 top-5 right-5">
+      <div className="absolute z-20 top-5 right-3 sm:right-6 md:right-8">
         <ToggleTheme />
       </div>
 
-      <div className="relative z-10 mx-auto flex w-full max-w-[calc(100vw-4rem)] flex-col px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
-        <div className="max-w-full flex items-center flex-wrap justify-center md:justify-between sm:text-left">
-          <div className="flex items-start gap-2">
+      <div className="relative z-10 mx-auto flex flex-col px-3 py-6 sm:px-6 lg:px-8 lg:py-14">
+        <div className="mt-8 flex flex-col gap-4 lg:mt-0 md:flex-row md:items-start md:justify-between sm:text-left">
+          <div className="flex w-full items-start gap-2">
             <Link
               to="/"
-              className="dark:text-gray-300 border backdrop-blur-3xl hover:bg-gray-500  text-gray-800"
+              className="inline-flex h-8 w-8 md:h-12 md:w-12 shrink-0 items-center justify-center border text-gray-800 backdrop-blur-3xl hover:bg-gray-500 dark:text-gray-300"
             >
-              <ArrowUpLeft size={60} />
+              <ArrowUpLeft size={20} />
             </Link>
-            <div className="flex flex-col items-start gap-3">
-              <h1 className="text-4xl font-light md:text-6xl">Your Rooms</h1>
+            <div className="w-full flex justify-between">
+              <h1 className="text-3xl font-light sm:text-4xl lg:text-5xl">
+                Your Rooms
+              </h1>
               <button
                 type="button"
                 onClick={() => {
                   void createRoom();
                 }}
                 disabled={isCreatingRoom}
-                className="inline-flex items-center gap-2 border border-gray-500/50 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-300 shadow-sm transition hover:bg-gray-500 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-300 dark:text-gray-800"
+                aria-label="Create a new room"
+                title="Create a new room"
+                className="group inline-flex w-auto items-center justify-center gap-2 border border-gray-500/50 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-300 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-gray-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-300 dark:text-gray-800 md:text-lg"
               >
-                <Plus size={16} />
-                {isCreatingRoom ? "Creating..." : "New Room"}
+                <Plus
+                  size={16}
+                  className={
+                    isCreatingRoom
+                      ? "animate-spin"
+                      : "transition-transform duration-200 group-hover:rotate-90 group-active:scale-110"
+                  }
+                />
+                <span className="hidden sm:block">
+                  {isCreatingRoom ? "Creating..." : "New Room"}
+                </span>
               </button>
             </div>
           </div>
-          <div className="min-w-0">
-            {selectedRoom ? (
-              <div className="mt-2 w-sm">
-                <RoomCard
-                  room={selectedRoom}
-                  selected={true}
-                  copied={copiedRoomCode === selectedRoom.unique_string}
-                  onSelect={openRoomInbox}
-                  onRename={updateRoomName}
-                  onCopy={(roomCode: string) => {
-                    void copyRoomCode(roomCode);
-                  }}
-                  onDelete={(room: Room) => {
-                    requestDeleteRoom(room);
-                  }}
-                />
-              </div>
-            ) : (
-              <p className="mt-2 text-sm opacity-75">No room selected yet.</p>
-            )}
-          </div>
         </div>
 
-        <form
+        {/* <form
           className="mt-6 grid gap-3 border border-gray-500/40 bg-gray-200/70 p-3 text-sm shadow-sm dark:bg-gray-700/70 sm:grid-cols-[minmax(0,1fr)_180px_auto]"
           onSubmit={handleSearchSubmit}
         >
@@ -428,7 +410,7 @@ function Rooms() {
           >
             Search
           </button>
-        </form>
+        </form> */}
 
         <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-sm opacity-75">
@@ -482,7 +464,7 @@ function Rooms() {
           </div>
         </div>
 
-        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-2 2xl:grid-cols-4">
           {isLoading ? (
             <div className="col-span-full border border-gray-500/50 bg-gray-200/70 px-4 py-6 text-sm opacity-80 dark:bg-gray-700/70">
               Loading rooms...

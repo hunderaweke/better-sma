@@ -11,7 +11,7 @@ import {
   AlertCircle,
   Volume2,
   VolumeX,
-  DoorClosed,
+  DoorOpen,
 } from "lucide-react";
 import ToggleTheme from "../components/ToggleTheme";
 import Message from "../components/Message";
@@ -475,7 +475,7 @@ function InboxDetailView({ roomId: uniqueString }: { roomId: string }) {
                     to="/rooms"
                     className="inline-flex gap-2 items-center bg-gray-800 text-gray-200 dark:bg-gray-300 dark:text-gray-800 px-4 py-2 text-xs font-semibold tracking-wide shadow-sm"
                   >
-                    <DoorClosed size={16} />
+                    <DoorOpen size={16} />
                     <span className="hidden sm:block">Rooms</span>
                   </Link>
                 </div>

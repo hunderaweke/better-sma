@@ -1,4 +1,4 @@
-import { Check, Edit3, Save, Share2, Trash2, X } from "lucide-react";
+import { Check, Edit3, Save, Share2, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import getVibrantColor from "../utils/color";
 import type { Room } from "../types";
@@ -27,7 +27,6 @@ function RoomCard({
   const [nameDraft, setNameDraft] = useState(room.name || "");
   const [isSaving, setIsSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-
   const handleSelect = () => {
     onSelect?.(room);
   };
@@ -98,14 +97,14 @@ function RoomCard({
         <div className="flex min-w-0 flex-1 flex-col gap-2 items-start justify-between">
           <div className="flex min-w-0 items-center gap-3">
             <span
-              className="h-5 w-5 shrink-0 border border-gray-500/50"
+              className="h-10 w-10 shrink-0 border border-gray-500/50"
               style={{ backgroundColor: color }}
             />
             {isEditing ? (
               <div className="flex min-w-0 flex-1 items-center gap-2">
                 <input
                   ref={inputRef}
-                  className="min-w-0 flex-1 border border-gray-500/60 bg-gray-300/80 px-3 py-2 text-sm font-semibold text-gray-800 outline-none focus:ring-2 focus:ring-gray-500/40 dark:bg-gray-800/70 dark:text-gray-100"
+                  className="min-w-0 max-w-44 flex-1 border border-gray-500/60 bg-gray-300/80 px-3 py-2 text-sm font-semibold text-gray-800 outline-none focus:ring-2 focus:ring-gray-500/40 dark:bg-gray-800/70 dark:text-gray-100"
                   aria-label="Room name"
                   value={nameDraft}
                   onChange={(event) => setNameDraft(event.target.value)}
@@ -123,7 +122,7 @@ function RoomCard({
                   }}
                 />
                 <button
-                  className="inline-flex shrink-0 items-center justify-center border border-gray-800 px-3 py-2 text-sm font-bold text-gray-800 backdrop-blur-3xl hover:bg-gray-700 hover:text-gray-100 dark:border-gray-300 dark:text-gray-300 dark:hover:bg-gray-500 dark:hover:text-gray-100"
+                  className="inline-flex h-10 shrink-0 items-center justify-center border border-gray-800 px-3 py-2 text-sm font-bold text-gray-800 backdrop-blur-3xl hover:bg-gray-700 hover:text-gray-100 dark:border-gray-300 dark:text-gray-300 dark:hover:bg-gray-500 dark:hover:text-gray-100"
                   aria-label="Save room name"
                   type="button"
                   onClick={(event) => {
@@ -134,38 +133,17 @@ function RoomCard({
                 >
                   <Save size={16} />
                 </button>
-                <button
-                  className="inline-flex shrink-0 items-center justify-center border border-gray-500/60 px-3 py-2 text-sm font-bold text-gray-700 backdrop-blur-3xl hover:bg-gray-500/20 dark:border-gray-300 dark:text-gray-300 dark:hover:bg-gray-500/20"
-                  aria-label="Cancel room edit"
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    cancelEditing();
-                  }}
-                  disabled={isSaving}
-                >
-                  <X size={16} />
-                </button>
               </div>
             ) : (
               <div className="flex min-w-0 flex-col">
-                <span className="truncate text-sm font-semibold opacity-85 sm:text-base">
+                <span className="truncate font-semibold opacity-85 text-[0.65rem] sm:text-base">
                   {room.name || room.unique_string}
                 </span>
-                <span className="truncate text-[11px] opacity-65 sm:text-xs">
+                <span className="truncate text-[8px] opacity-65 sm:text-xs">
                   {room.unique_string}
                 </span>
               </div>
             )}
-          </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs opacity-75">
-            <span>
-              <span className="font-bold">Created:</span>{" "}
-              {new Date(room.created_at).toLocaleDateString()}
-            </span>
-            <span>
-              <span className="font-bold">Msgs:</span> {room.messages_cnt ?? 0}
-            </span>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -183,8 +161,8 @@ function RoomCard({
             </button>
           )}
           <button
-            className="h-full shrink-0 border border-gray-800 px-3 py-3 text-sm font-bold text-gray-800 backdrop-blur-3xl hover:bg-red-700 hover:text-gray-100 dark:border-gray-300 dark:text-gray-300 dark:hover:bg-red-500 dark:hover:text-gray-100"
-            aria-label="Delete room"
+            className={`h-full shrink-0 border border-gray-800 px-3 py-3 text-sm font-bold text-gray-800 backdrop-blur-3xl hover:bg-red-700 hover:text-gray-100 dark:border-gray-300 dark:text-gray-300 dark:hover:bg-red-500 dark:hover:text-gray-100"
+            aria-label="Delete room ${isEditing ? "hidden" : ""}`}
             type="button"
             onClick={(event) => {
               event.stopPropagation();
@@ -194,7 +172,7 @@ function RoomCard({
             <Trash2 size={16} />
           </button>
           <button
-            className="h-full shrink-0 cursor-pointer bg-gray-800 px-3 py-2 text-sm font-bold text-gray-300 backdrop-blur-3xl transition hover:bg-gray-500 dark:bg-gray-300 dark:text-gray-800"
+            className={`h-10 ring-1 ring-gray-800 shrink-0 cursor-pointer bg-gray-800 px-3 py-2 text-sm font-bold text-gray-300 backdrop-blur-3xl transition hover:bg-gray-500 dark:bg-gray-300 dark:text-gray-800  ${isEditing ? "hidden" : ""}`}
             onClick={(event) => {
               event.stopPropagation();
               onCopy(room.unique_string);
@@ -210,6 +188,15 @@ function RoomCard({
             )}
           </button>
         </div>
+      </div>
+      <div className="mt-2 flex flex-wrap justify-between w-full text-xs opacity-75">
+        <span>
+          <span className="font-bold">Created:</span>{" "}
+          {new Date(room.created_at).toLocaleDateString()}
+        </span>
+        <span>
+          <span className="font-bold">Msgs:</span> {room.messages_cnt ?? 0}
+        </span>
       </div>
     </div>
   );
