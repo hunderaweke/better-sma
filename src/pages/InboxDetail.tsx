@@ -348,7 +348,9 @@ function InboxDetailView({ roomId: uniqueString }: { roomId: string }) {
         }
 
         if (!response.body) {
-          throw new Error("Live message stream did not return a readable body.");
+          throw new Error(
+            "Live message stream did not return a readable body.",
+          );
         }
 
         reconnectAttemptsRef.current = 0;

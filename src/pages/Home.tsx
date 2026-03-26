@@ -267,11 +267,14 @@ function Home() {
 
   function handleLogout() {
     clearSelectedRoomFromStorage();
-    api.post(logoutUrl, {}).catch(() => {}).finally(() => {
-      localStorage.removeItem("access_token");
-      setIsLoggedIn(false);
-      setLoggedInUserName(null);
-    });
+    api
+      .post(logoutUrl, {})
+      .catch(() => {})
+      .finally(() => {
+        localStorage.removeItem("access_token");
+        setIsLoggedIn(false);
+        setLoggedInUserName(null);
+      });
   }
 
   return (
