@@ -3,11 +3,11 @@
   "rewrites": [
     {
       "source": "/api/auth/(.*)",
-      "destination": "https://sma-api.hundera.com/api/auth/$1"
+      "destination": "https://sma-api.hundera.com/auth/$1"
     },
     {
       "source": "/api/(.*)",
-      "destination": "https://sma-api.hundera.com/api/$1"
+      "destination": "https://sma-api.hundera.com/$1"
     },
     {
       "source": "/(.*)",
