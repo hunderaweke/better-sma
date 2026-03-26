@@ -95,7 +95,7 @@ function InboxDetailView({ roomId: uniqueString }: { roomId: string }) {
   const [roomName, setRoomName] = useState<string>(uniqueString);
   const [roomNameDraft, setRoomNameDraft] = useState<string>(uniqueString);
   const [isEditingRoomName, setIsEditingRoomName] = useState(false);
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const streamAbortRef = useRef<AbortController | null>(null);
   const reconnectTimerRef = useRef<number | null>(null);
   const reconnectAttemptsRef = useRef<number>(0);
   const hasShownConnectionErrorRef = useRef<boolean>(false);
@@ -266,63 +266,144 @@ function InboxDetailView({ roomId: uniqueString }: { roomId: string }) {
       }
     };
 
-    const connect = () => {
-      clearReconnectTimer();
+    const closeStream = () => {
+      if (streamAbortRef.current) {
+        streamAbortRef.current.abort();
+        streamAbortRef.current = null;
+      }
+    };
 
-      const eventSource = new EventSource(
-        `/api/rooms/${encodeURIComponent(uniqueString)}/messages/receive`,
-        {
-          withCredentials: true,
-        },
-      );
+    const handleIncomingMessage = (rawData: string) => {
+      if (!rawData || rawData.trim().length === 0) {
+        return;
+      }
 
-      eventSourceRef.current = eventSource;
-
-      eventSource.onopen = () => {
-        reconnectAttemptsRef.current = 0;
-        hasShownConnectionErrorRef.current = false;
-      };
-
-      eventSource.onmessage = (event) => {
-        if (!event.data || event.data.trim().length === 0) {
+      try {
+        const nextMessage = normalizeRoomMessage(JSON.parse(rawData));
+        console.log("Received message event:", {
+          rawData,
+          nextMessage,
+        });
+        if (!nextMessage) {
           return;
         }
 
-        try {
-          const nextMessage = normalizeRoomMessage(JSON.parse(event.data));
-          console.log("Received message event:", {
-            rawData: event.data,
-            nextMessage,
-          });
-          if (!nextMessage) {
+        const alreadyExists = messagesRef.current.some(
+          (message) => message.id === nextMessage.id,
+        );
+
+        if (!alreadyExists) {
+          announceNewMessage(nextMessage);
+        }
+
+        setMessages((currentMessages) => {
+          const withoutDuplicate = currentMessages.filter(
+            (message) => message.id !== nextMessage.id,
+          );
+
+          return [nextMessage, ...withoutDuplicate];
+        });
+      } catch (error) {
+        console.error("Error processing message event:", {
+          error,
+          rawData,
+        });
+      }
+    };
+
+    const connect = async () => {
+      clearReconnectTimer();
+
+      closeStream();
+
+      const abortController = new AbortController();
+      streamAbortRef.current = abortController;
+
+      try {
+        const token = localStorage.getItem("access_token");
+        const response = await fetch(
+          `/api/rooms/${encodeURIComponent(uniqueString)}/messages/receive`,
+          {
+            headers: token
+              ? {
+                  Authorization: `Bearer ${token}`,
+                }
+              : undefined,
+            signal: abortController.signal,
+          },
+        );
+
+        if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            notifyError(
+              "Authentication required",
+              "Please sign in again to continue receiving live updates.",
+            );
             return;
           }
 
-          const alreadyExists = messagesRef.current.some(
-            (message) => message.id === nextMessage.id,
+          throw new Error(
+            `Live message stream failed with status ${response.status}`,
           );
+        }
 
-          if (!alreadyExists) {
-            announceNewMessage(nextMessage);
+        if (!response.body) {
+          throw new Error("Live message stream did not return a readable body.");
+        }
+
+        reconnectAttemptsRef.current = 0;
+        hasShownConnectionErrorRef.current = false;
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let bufferedText = "";
+        let bufferedDataLines: string[] = [];
+
+        const flushEvent = () => {
+          if (bufferedDataLines.length === 0) {
+            return;
           }
 
-          setMessages((currentMessages) => {
-            const withoutDuplicate = currentMessages.filter(
-              (message) => message.id !== nextMessage.id,
-            );
+          handleIncomingMessage(bufferedDataLines.join("\n"));
+          bufferedDataLines = [];
+        };
 
-            return [nextMessage, ...withoutDuplicate];
-          });
-        } catch (error) {
-          console.error("Error processing message event:", {
-            error,
-            rawData: event.data,
-          });
+        while (isActive && !abortController.signal.aborted) {
+          const { value, done } = await reader.read();
+
+          if (done) {
+            break;
+          }
+
+          bufferedText += decoder.decode(value, { stream: true });
+
+          let newlineIndex = bufferedText.indexOf("\n");
+
+          while (newlineIndex !== -1) {
+            const line = bufferedText.slice(0, newlineIndex).replace(/\r$/, "");
+            bufferedText = bufferedText.slice(newlineIndex + 1);
+
+            if (line === "") {
+              flushEvent();
+            } else if (line.startsWith("data:")) {
+              bufferedDataLines.push(line.slice(5).replace(/^ /, ""));
+            }
+
+            newlineIndex = bufferedText.indexOf("\n");
+          }
         }
-      };
 
-      eventSource.onerror = () => {
+        flushEvent();
+
+        if (isActive && !abortController.signal.aborted) {
+          throw new Error("Live message stream closed unexpectedly.");
+        }
+      } catch {
         if (!isActive) {
+          return;
+        }
+
+        if (abortController.signal.aborted) {
           return;
         }
 
@@ -334,27 +415,24 @@ function InboxDetailView({ roomId: uniqueString }: { roomId: string }) {
           hasShownConnectionErrorRef.current = true;
         }
 
-        eventSource.close();
-
         const attempt = reconnectAttemptsRef.current + 1;
         reconnectAttemptsRef.current = attempt;
 
         const retryDelay = Math.min(1000 * attempt, 5000);
         reconnectTimerRef.current = window.setTimeout(() => {
           if (isActive) {
-            connect();
+            void connect();
           }
         }, retryDelay);
-      };
+      }
     };
 
-    connect();
+    void connect();
 
     return () => {
       isActive = false;
       clearReconnectTimer();
-      eventSourceRef.current?.close();
-      eventSourceRef.current = null;
+      closeStream();
     };
   }, [uniqueString]);
 

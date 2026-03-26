@@ -27,6 +27,26 @@ export function GlobalInit() {
     initializationStarted = true;
 
     async function init() {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("token");
+
+      if (token) {
+        const nextToken = token.trim();
+
+        if (nextToken) {
+          localStorage.setItem("access_token", nextToken);
+
+          params.delete("token");
+          const nextSearch = params.toString();
+
+          window.history.replaceState(
+            null,
+            "",
+            `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`,
+          );
+        }
+      }
+
       let isLoggedIn = false;
 
       try {

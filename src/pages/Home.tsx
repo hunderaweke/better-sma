@@ -1,7 +1,7 @@
 import IdentityTag from "../components/IdentityTag";
 import ToggleTheme from "../components/ToggleTheme";
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { CircleUserRound, Inbox, LogOut, DoorOpen } from "lucide-react";
 import { SiGithub, SiGoogle } from "@icons-pack/react-simple-icons";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -22,11 +22,7 @@ const logoutUrl =
   import.meta.env.VITE_LOGOUT_URL ?? `${apiBaseUrl}/api/auth/logout`;
 
 function getStoredAuthState() {
-  return Boolean(
-    localStorage.getItem("accessToken") ||
-    localStorage.getItem("token") ||
-    localStorage.getItem("isLoggedIn") === "true",
-  );
+  return Boolean(localStorage.getItem("access_token"));
 }
 function parseAuthError(payload: unknown): string | null {
   if (typeof payload !== "string") {
@@ -94,6 +90,63 @@ function Home() {
   const navigate = useNavigate();
   const defaultRoom = readSelectedRoomFromStorage();
 
+  const checkAuth = useCallback(async () => {
+    try {
+      const response = await api.get<unknown>(authStatusUrl);
+
+      setIsLoggedIn(true);
+      setLoggedInUserName(getDisplayName(response.data));
+      return;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+
+        if (status === 401 || status === 403) {
+          setIsLoggedIn(false);
+          setLoggedInUserName(null);
+          return;
+        }
+      }
+    }
+
+    if (getStoredAuthState()) {
+      setIsLoggedIn(true);
+      return;
+    }
+
+    setIsLoggedIn(false);
+    setLoggedInUserName(null);
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const token = params.get("token");
+
+    if (!token) {
+      return;
+    }
+
+    const nextToken = token.trim();
+
+    if (!nextToken) {
+      return;
+    }
+
+    localStorage.setItem("access_token", nextToken);
+    setIsLoggedIn(true);
+    setLoggedInUserName(null);
+
+    params.delete("token");
+    const nextSearch = params.toString();
+
+    navigate(
+      `${location.pathname}${nextSearch ? `?${nextSearch}` : ""}${location.hash}`,
+      { replace: true },
+    );
+
+    void checkAuth();
+  }, [checkAuth, location.hash, location.pathname, location.search, navigate]);
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const errorCode = params.get("error");
@@ -150,46 +203,8 @@ function Home() {
   };
 
   useEffect(() => {
-    let isActive = true;
-
-    async function checkAuth() {
-      try {
-        const response = await api.get<unknown>(authStatusUrl);
-
-        if (!isActive) {
-          return;
-        }
-
-        setIsLoggedIn(true);
-        setLoggedInUserName(getDisplayName(response.data));
-        return;
-      } catch (error) {
-        if (!isActive) {
-          return;
-        }
-
-        if (axios.isAxiosError(error)) {
-          const status = error.response?.status;
-
-          if (status === 401 || status === 403) {
-            setIsLoggedIn(false);
-            setLoggedInUserName(null);
-            return;
-          }
-        }
-      }
-
-      if (isActive) {
-        setIsLoggedIn(getStoredAuthState());
-      }
-    }
-
     void checkAuth();
-
-    return () => {
-      isActive = false;
-    };
-  }, []);
+  }, [checkAuth]);
 
   useEffect(() => {
     if (!analytics) {
@@ -252,9 +267,11 @@ function Home() {
 
   function handleLogout() {
     clearSelectedRoomFromStorage();
-    setIsLoggedIn(false);
-    setLoggedInUserName(null);
-    api.post(logoutUrl, {}).catch(() => {});
+    api.post(logoutUrl, {}).catch(() => {}).finally(() => {
+      localStorage.removeItem("access_token");
+      setIsLoggedIn(false);
+      setLoggedInUserName(null);
+    });
   }
 
   return (
