@@ -30,11 +30,8 @@ export function GlobalInit() {
       let isLoggedIn = false;
 
       try {
-        const authResponse = await fetch(authStatusUrl, {
-          credentials: "include",
-        });
-
-        isLoggedIn = authResponse.ok;
+        await api.get(authStatusUrl);
+        isLoggedIn = true;
       } catch {
         isLoggedIn = false;
       }

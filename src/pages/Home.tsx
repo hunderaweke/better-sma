@@ -1,5 +1,6 @@
 import IdentityTag from "../components/IdentityTag";
 import ToggleTheme from "../components/ToggleTheme";
+import axios from "axios";
 import { useEffect, useState } from "react";
 import { CircleUserRound, Inbox, LogOut, DoorOpen } from "lucide-react";
 import { SiGithub, SiGoogle } from "@icons-pack/react-simple-icons";
@@ -153,37 +154,28 @@ function Home() {
 
     async function checkAuth() {
       try {
-        const response = await fetch(authStatusUrl, {
-          credentials: "include",
-        });
+        const response = await api.get<unknown>(authStatusUrl);
 
         if (!isActive) {
           return;
         }
 
-        if (response.ok) {
-          let nextUserName: string | null = null;
+        setIsLoggedIn(true);
+        setLoggedInUserName(getDisplayName(response.data));
+        return;
+      } catch (error) {
+        if (!isActive) {
+          return;
+        }
 
-          try {
-            const authData: unknown = await response.json();
-            nextUserName = getDisplayName(authData);
-          } catch {
-            nextUserName = null;
+        if (axios.isAxiosError(error)) {
+          const status = error.response?.status;
+
+          if (status === 401 || status === 403) {
+            setIsLoggedIn(false);
+            setLoggedInUserName(null);
+            return;
           }
-
-          setIsLoggedIn(true);
-          setLoggedInUserName(nextUserName);
-          return;
-        }
-
-        if (response.status === 401 || response.status === 403) {
-          setIsLoggedIn(false);
-          setLoggedInUserName(null);
-          return;
-        }
-      } catch {
-        if (!isActive) {
-          return;
         }
       }
 
