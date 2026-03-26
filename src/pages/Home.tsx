@@ -10,6 +10,7 @@ import {
   clearSelectedRoomFromStorage,
   readSelectedRoomFromStorage,
 } from "../utils/roomStorage";
+import type { AuthUser } from "../types";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
 const authStatusUrl =
@@ -42,18 +43,7 @@ function getDisplayName(authData: unknown) {
     return null;
   }
 
-  const user = authData as {
-    name?: unknown;
-    displayName?: unknown;
-    fullName?: unknown;
-    email?: unknown;
-    user?: {
-      name?: unknown;
-      displayName?: unknown;
-      fullName?: unknown;
-      email?: unknown;
-    };
-  };
+  const user = authData as AuthUser;
 
   const candidate =
     user.displayName ??

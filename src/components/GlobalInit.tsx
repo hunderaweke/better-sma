@@ -4,13 +4,13 @@ import api from "../utils/api";
 import NotificationCenter from "./NotificationCenter";
 import {
   clearStoredIdentity,
-  createStoredIdentity,
   isIdentityExpired,
   readStoredIdentity,
 } from "../utils/identity";
 import {
   clearSelectedRoomFromStorage,
   saveSelectedRoomToStorage,
+  readSelectedRoomFromStorage,
 } from "../utils/roomStorage";
 import type { Room } from "../types";
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -65,38 +65,24 @@ export function GlobalInit() {
       if (storedIdentity && isIdentityExpired(storedIdentity)) {
         clearStoredIdentity();
       }
-
-      const activeIdentity =
-        storedIdentity && !isIdentityExpired(storedIdentity)
-          ? storedIdentity
-          : await createStoredIdentity();
-
-      const identity = activeIdentity.unique_string;
-
       try {
-        const roomsRequest = api.get("/api/rooms", {
-          params: {
-            page: 1,
-            page_size: 1,
-            sort_by: "created_at",
-            sort_order: "desc",
-          },
-        });
-        const minimumDelay = new Promise((resolve) => {
-          window.setTimeout(resolve, 3000);
-        });
+        const rooms: Room[] = await api
+          .get("/api/rooms", {
+            params: {
+              page: 1,
+              page_size: 1,
+              sort_by: "created_at",
+              sort_order: "desc",
+            },
+          })
+          .then((res) => res.data?.data);
 
-        const [roomsRes] = await Promise.all([roomsRequest, minimumDelay]);
-        const payloadData = roomsRes.data?.data;
-        const rooms = Array.isArray(payloadData) ? payloadData : [];
-        const ownedRooms = identity
-          ? rooms.filter(
-              (room: Room) =>
-                room.owner_id === identity || room.unique_string === identity,
-            )
-          : [];
+        const storedRoom = readSelectedRoomFromStorage();
+        if (storedRoom) {
+          return;
+        }
 
-        const nextDefaultRoom = ownedRooms[0] ?? null;
+        const nextDefaultRoom = rooms[0] ?? null;
 
         if (nextDefaultRoom) {
           saveSelectedRoomToStorage(nextDefaultRoom);

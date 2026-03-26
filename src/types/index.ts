@@ -1,3 +1,4 @@
+export type { AuthUser } from "./auth";
 export type {
   Identity,
   IdentityDropdownItem,
