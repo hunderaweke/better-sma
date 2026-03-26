@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import ToggleTheme from "../components/ToggleTheme";
+import NotFound from "./NotFound";
 import api from "../utils/api";
 import { SendIcon, Loader2, CheckIcon, AlertCircle } from "lucide-react";
 import getVibrantColor from "../utils/color";
@@ -10,6 +11,7 @@ import {
   readStoredIdentity,
   type StoredIdentity,
 } from "../utils/identity";
+import type { Room } from "../types";
 
 function Send() {
   const { identity } = useParams();
@@ -21,6 +23,9 @@ function Send() {
     null,
   );
   const [isPreparingIdentity, setIsPreparingIdentity] = useState(true);
+  const [room, setRoom] = useState<Room | null>(null);
+  const [isLoadingRoom, setIsLoadingRoom] = useState(true);
+  const [isRoomMissing, setIsRoomMissing] = useState(false);
 
   useEffect(() => {
     let isActive = true;
@@ -60,16 +65,85 @@ function Send() {
     };
   }, []);
 
+  useEffect(() => {
+    let isActive = true;
+
+    async function fetchRoomDetails() {
+      if (!identity) {
+        if (isActive) {
+          setIsRoomMissing(true);
+          setIsLoadingRoom(false);
+        }
+        return;
+      }
+
+      try {
+        const response = await api.get<{ data?: Room[] }>("/api/rooms", {
+          params: {
+            unique_string: identity,
+            page: 1,
+            page_size: 1,
+            sort_by: "created_at",
+            sort_order: "desc",
+          },
+        });
+
+        if (!isActive) {
+          return;
+        }
+
+        const rooms = Array.isArray(response.data?.data)
+          ? response.data.data
+          : [];
+        const nextRoom = rooms.find(
+          (roomItem) => roomItem.unique_string === identity,
+        );
+
+        setRoom(nextRoom ?? null);
+        setIsRoomMissing(!nextRoom);
+      } catch (error) {
+        if (!isActive) {
+          return;
+        }
+
+        console.error("Failed to load room details", error);
+        setRoom(null);
+        setIsRoomMissing(true);
+      } finally {
+        if (isActive) {
+          setIsLoadingRoom(false);
+        }
+      }
+    }
+
+    void fetchRoomDetails();
+
+    return () => {
+      isActive = false;
+    };
+  }, [identity]);
+
   const handleSend = async () => {
-    if (!message.trim() || !identity) return;
+    if (
+      !message.trim() ||
+      !identity ||
+      isLoadingRoom ||
+      isRoomMissing ||
+      !room
+    ) {
+      return;
+    }
 
     setSendStatus("loading");
     try {
       const currentIdentity = await getOrCreateStoredIdentity();
-      await api.post(`/api/rooms/${identity}/messages`, {
-        from_unique: currentIdentity.unique_string,
-        text: message,
-      });
+      await api.post(
+        `/api/rooms/${encodeURIComponent(room.unique_string)}/messages`,
+        {
+          from_unique: currentIdentity.unique_string,
+          text: message,
+        },
+      );
       setMessage("");
       setSendStatus("success");
       setTimeout(() => setSendStatus("idle"), 1200);
@@ -79,6 +153,10 @@ function Send() {
       setTimeout(() => setSendStatus("idle"), 1600);
     }
   };
+
+  if (isRoomMissing && !isLoadingRoom) {
+    return <NotFound />;
+  }
 
   return (
     <section className="relative min-h-screen bg-gray-300 text-gray-800 dark:bg-gray-800 dark:text-gray-300 flex flex-col w-full items-center">
@@ -111,7 +189,20 @@ function Send() {
         <div className="border border-gray-800 dark:border-gray-500 bg-transparent p-6">
           <h1 className="text-sm lg:text-3xl font-normal text-left flex items-baseline gap-2">
             Send to
-            {identity && (
+            {room ? (
+              <div className="text-gray-700/80 dark:text-gray-300 flex items-center font-light">
+                <span className="border-1 border-r-0 px-4" style={{}}>
+                  {room.name || room.unique_string}
+                </span>
+                <div
+                  className="inline-block h-5 w-5 lg:h-9 lg:w-9 shrink-0 ring-1"
+                  style={{
+                    backgroundColor: getVibrantColor(room.unique_string),
+                    borderColor: getVibrantColor(room.unique_string),
+                  }}
+                ></div>
+              </div>
+            ) : identity ? (
               <div className="text-gray-700/80 dark:text-gray-300 flex items-center font-light">
                 <span className="border-1 border-r-0 px-4" style={{}}>
                   {identity}
@@ -124,7 +215,7 @@ function Send() {
                   }}
                 ></div>
               </div>
-            )}
+            ) : null}
           </h1>
         </div>
 
@@ -155,7 +246,12 @@ function Send() {
             <button
               onClick={handleSend}
               disabled={
-                sendStatus === "loading" || !message.trim() || !senderIdentity
+                sendStatus === "loading" ||
+                !message.trim() ||
+                !senderIdentity ||
+                isLoadingRoom ||
+                isRoomMissing ||
+                !room
               }
               className="w-full h-12 sm:h-auto sm:w-[100px] shrink-0 bg-transparent border border-gray-800 dark:border-gray-500 p-4 transition-colors hover:bg-gray-400/20 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm flex items-center justify-center"
             >

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import axios from "axios";
 import { Link, Navigate, useParams } from "react-router-dom";
 import {
   Edit3,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 import ToggleTheme from "../components/ToggleTheme";
 import Message from "../components/Message";
+import NotFound from "./NotFound";
 import api from "../utils/api";
 import type { Room } from "../types";
 import {
@@ -95,6 +97,7 @@ function InboxDetailView({ roomId: uniqueString }: { roomId: string }) {
   const [roomName, setRoomName] = useState<string>(uniqueString);
   const [roomNameDraft, setRoomNameDraft] = useState<string>(uniqueString);
   const [isEditingRoomName, setIsEditingRoomName] = useState(false);
+  const [isRoomMissing, setIsRoomMissing] = useState(false);
   const streamAbortRef = useRef<AbortController | null>(null);
   const reconnectTimerRef = useRef<number | null>(null);
   const reconnectAttemptsRef = useRef<number>(0);
@@ -142,9 +145,11 @@ function InboxDetailView({ roomId: uniqueString }: { roomId: string }) {
         );
 
         if (!nextRoom) {
+          setIsRoomMissing(true);
           return;
         }
 
+        setIsRoomMissing(false);
         setRoomName(nextRoom.name || nextRoom.unique_string);
         setRoomNameDraft(nextRoom.name || nextRoom.unique_string);
 
@@ -157,6 +162,7 @@ function InboxDetailView({ roomId: uniqueString }: { roomId: string }) {
         }
       } catch (error) {
         console.error("Failed to load room details", error);
+        setIsRoomMissing(true);
       }
     }
 
@@ -237,10 +243,15 @@ function InboxDetailView({ roomId: uniqueString }: { roomId: string }) {
 
         setMessages(nextMessages);
         setLoadError(null);
-      } catch {
+      } catch (error) {
         if (isActive) {
           setMessages([]);
-          setLoadError("Unable to load messages for this identity.");
+          if (axios.isAxiosError(error) && error.response?.status === 404) {
+            setIsRoomMissing(true);
+            setLoadError(null);
+          } else {
+            setLoadError("Unable to load messages for this identity.");
+          }
         }
       } finally {
         if (isActive) {
@@ -516,6 +527,10 @@ function InboxDetailView({ roomId: uniqueString }: { roomId: string }) {
       notifyError("Rename failed", "We could not update the room name.");
     }
   };
+
+  if (isRoomMissing) {
+    return <NotFound />;
+  }
 
   return (
     <section className="relative min-h-screen bg-gray-300 text-center text-gray-800 dark:bg-gray-800 dark:text-gray-300">
